@@ -277,7 +277,6 @@ export default function AdminDashboardPage() {
   const addCar = useStore((state) => state.addCar)
   const updateCar = useStore((state) => state.updateCar)
   const deleteCar = useStore((state) => state.deleteCar)
-  const resetCars = useStore((state) => state.resetCars)
   const updateLeadStatus = useStore((state) => state.updateLeadStatus)
   const deleteLead = useStore((state) => state.deleteLead)
 
@@ -1086,9 +1085,7 @@ export default function AdminDashboardPage() {
                     <Bell className="h-4 w-4" /> Notifikasi
                   </button>
                 )}
-                <button onClick={resetCars} className="inline-flex items-center gap-2.5 rounded-full border border-border bg-card px-5 py-3 text-xs font-bold hover:bg-muted transition-colors shadow-sm">
-                  <RefreshCw className="h-4 w-4" /> Reset Data
-                </button>
+
                 <button
                   onClick={() => {
                     const session = sessionStorage.getItem('denken_admin_session')

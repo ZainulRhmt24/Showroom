@@ -99,7 +99,6 @@ interface StoreState {
   addCar: (carData: Omit<Car, 'id' | 'slug'> & { id?: string; slug?: string }) => void
   updateCar: (id: string, carData: Partial<Car>) => void
   deleteCar: (id: string) => void
-  resetCars: () => void
   syncFromDatabase: (cars: Car[], leads: Lead[]) => void
   addLead: (leadData: Omit<Lead, 'id' | 'createdAt' | 'status'>) => void
   updateLeadStatus: (id: string, status: Lead['status']) => void
@@ -370,19 +369,6 @@ export const useStore = create<StoreState>()(
             cars: state.cars.filter((c) => c.id !== id),
             wishlist: state.wishlist.filter((wId) => wId !== id),
             compare: state.compare.filter((cId) => cId !== id),
-          }
-        }),
-
-      resetCars: () =>
-        set((state) => {
-          const activeOwnerId = state.currentAdminUser?.ownerId || state.currentAdminUser?.id || 'admin_owner_1'
-          if (activeOwnerId === 'admin_owner_1') {
-            const otherCars = state.cars.filter((c) => (c.ownerId || 'admin_owner_1') !== 'admin_owner_1')
-            const defaultCars = CARS.map((c) => ({ ...c, ownerId: 'admin_owner_1' }))
-            return { cars: [...defaultCars, ...otherCars] }
-          } else {
-            const otherCars = state.cars.filter((c) => (c.ownerId || 'admin_owner_1') !== activeOwnerId)
-            return { cars: otherCars }
           }
         }),
 
