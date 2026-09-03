@@ -54,7 +54,7 @@ export function Navbar() {
           <Link href={getNavHref('/')} className="transition hover:text-primary">Home</Link>
           <Link href={getNavHref('/mobil')} className="transition hover:text-primary">Mobil</Link>
           <Link href={getNavHref('/simulasi-kredit')} className="transition hover:text-primary">Kredit</Link>
-          <Link href={getNavHref('/#tentang')} className="transition hover:text-primary">Tentang Kami</Link>
+          <Link href={getNavHref('/tentang-kami')} className="transition hover:text-primary">Tentang Kami</Link>
         </nav>
 
         <div className={`flex items-center gap-2 ${textClass}`}>
@@ -84,7 +84,7 @@ export function Navbar() {
             <Link onClick={() => setMenuOpen(false)} href={getNavHref('/')}>Home</Link>
             <Link onClick={() => setMenuOpen(false)} href={getNavHref('/mobil')}>Mobil</Link>
             <Link onClick={() => setMenuOpen(false)} href={getNavHref('/simulasi-kredit')}>Kredit</Link>
-            <Link onClick={() => setMenuOpen(false)} href={getNavHref('/#tentang')}>Tentang Kami</Link>
+            <Link onClick={() => setMenuOpen(false)} href={getNavHref('/tentang-kami')}>Tentang Kami</Link>
             <Link onClick={() => setMenuOpen(false)} href={getNavHref('/kontak')} className="w-full text-center mt-4 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground">Hubungi Kami</Link>
           </nav>
         </div>
