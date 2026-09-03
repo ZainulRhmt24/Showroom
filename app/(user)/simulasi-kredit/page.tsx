@@ -227,20 +227,11 @@ function SimulationContent() {
                   <input
                     type="text"
                     value={formatDots(price)}
-                    onChange={(e) => setPrice(parseDots(e.target.value))}
-                    className="w-48 rounded-xl border border-border bg-muted/60 py-2 pl-9 pr-3 text-right font-display text-lg font-bold text-foreground outline-none focus:border-primary"
+                    readOnly
+                    className="w-48 rounded-xl border border-border/50 bg-muted/30 py-2 pl-9 pr-3 text-right font-display text-lg font-bold text-foreground outline-none cursor-not-allowed opacity-80"
                   />
                 </div>
               </div>
-              <input
-                type="range"
-                min="100000000"
-                max="3000000000"
-                step="10000000"
-                value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none bg-muted accent-primary outline-none cursor-pointer"
-              />
             </div>
 
             {/* Input 2: Uang Muka (DP) */}
@@ -253,8 +244,8 @@ function SimulationContent() {
               </div>
 
               {/* Preset DP Buttons */}
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {[15, 20, 30, 50].map((p) => (
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {[10, 15, 20, 30, 50].map((p) => (
                   <button
                     key={p}
                     onClick={() => setDpPercent(p)}

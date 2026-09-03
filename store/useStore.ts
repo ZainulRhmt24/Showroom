@@ -197,7 +197,7 @@ const initialAuth = getInitialAuthSession()
 
 export const useStore = create<StoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       wishlist: [],
       compare: [],
       recentlyViewed: [],
@@ -378,37 +378,34 @@ export const useStore = create<StoreState>()(
           leads: dbLeads,
         })),
 
-      addLead: (leadData) =>
-        set((state) => {
-          let targetOwnerId = (leadData as any).ownerId
-          if (!targetOwnerId && (leadData.carId || leadData.carName)) {
-            const matched = state.cars.find(
-              (c) => c.id === leadData.carId || (leadData.carName && c.name.toLowerCase() === leadData.carName.toLowerCase())
-            )
-            if (matched?.ownerId) {
-              targetOwnerId = matched.ownerId
-            }
+      addLead: async (leadData) => {
+        const state = get()
+        let targetOwnerId = (leadData as any).ownerId
+        if (!targetOwnerId && (leadData.carId || leadData.carName)) {
+          const matched = state.cars.find(
+            (c) => c.id === leadData.carId || (leadData.carName && c.name.toLowerCase() === leadData.carName.toLowerCase())
+          )
+          if (matched?.ownerId) {
+            targetOwnerId = matched.ownerId
           }
-          if (!targetOwnerId) {
-            targetOwnerId = state.currentAdminUser?.ownerId || state.currentAdminUser?.id || 'admin_owner_1'
-          }
+        }
+        if (!targetOwnerId) {
+          targetOwnerId = state.currentAdminUser?.ownerId || state.currentAdminUser?.id || 'admin_owner_1'
+        }
 
-          // Call server action asynchronously
-          import('@/app/actions/leadActions').then((m) => {
-            m.createLead({
-              ...leadData,
-              type: leadData.type === 'Trade-In' ? 'Trade_In' : (leadData.type as any),
-              ownerId: targetOwnerId,
-            })
-          })
+        // Call server action asynchronously and await the REAL database record
+        const m = await import('@/app/actions/leadActions')
+        const res = await m.createLead({
+          ...leadData,
+          type: leadData.type === 'Trade-In' ? 'Trade_In' : (leadData.type as any),
+          ownerId: targetOwnerId,
+        })
 
+        if (res.success && res.lead) {
           const newLead: Lead = {
-            ...leadData,
-            ownerId: targetOwnerId,
-            id: `lead_${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            status: 'Baru',
-          }
+            ...res.lead,
+            type: res.lead.type === 'Trade_In' ? 'Trade-In' : res.lead.type,
+          } as Lead
 
           // Trigger native browser notification if enabled
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -421,11 +418,12 @@ export const useStore = create<StoreState>()(
             }
           }
 
-          return {
+          set((state) => ({
             leads: [newLead, ...state.leads],
             lastNotification: `🔔 LEADS BARU: ${newLead.name} (${newLead.type}) - ${newLead.whatsapp}`,
-          }
-        }),
+          }))
+        }
+      },
 
       updateLeadStatus: (id, status) =>
         set((state) => {
@@ -437,12 +435,16 @@ export const useStore = create<StoreState>()(
           const targetLead = state.leads.find((l) => l.id === id)
           let updatedCars = state.cars
 
-          if (targetLead && status === 'Disetujui') {
+          if (targetLead) {
             const carToMark = targetLead.carId || targetLead.carName
             if (carToMark) {
               updatedCars = state.cars.map((c) => {
                 if (c.id === targetLead.carId || c.name === targetLead.carName) {
-                  return { ...c, isSoldOut: true, badge: 'SOLD OUT' as const }
+                  if (status === 'Disetujui') {
+                    return { ...c, isSoldOut: true, badge: 'SOLD OUT' as const }
+                  } else {
+                    return { ...c, isSoldOut: false, badge: 'READY STOCK' as const }
+                  }
                 }
                 return c
               })
@@ -461,7 +463,25 @@ export const useStore = create<StoreState>()(
           import('@/app/actions/leadActions').then((m) => {
             m.deleteLead(id)
           })
-          return { leads: state.leads.filter((l) => l.id !== id) }
+          
+          const targetLead = state.leads.find((l) => l.id === id)
+          let updatedCars = state.cars
+          if (targetLead && targetLead.status === 'Disetujui') {
+            const carToMark = targetLead.carId || targetLead.carName
+            if (carToMark) {
+              updatedCars = state.cars.map((c) => {
+                if (c.id === targetLead.carId || c.name === targetLead.carName) {
+                  return { ...c, isSoldOut: false, badge: 'READY STOCK' as const }
+                }
+                return c
+              })
+            }
+          }
+
+          return { 
+            leads: state.leads.filter((l) => l.id !== id),
+            cars: updatedCars
+          }
         }),
 
       addTestimonial: (data) =>

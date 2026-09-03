@@ -71,6 +71,17 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
       })
       revalidatePath('/')
       revalidatePath(`/mobil/${lead.carId}`)
+    } else if (status !== 'Disetujui' && lead.carId) {
+      // Revert if status changed back from approved
+      await prisma.car.update({
+        where: { id: lead.carId },
+        data: {
+          isSoldOut: false,
+          badge: 'READY STOCK',
+        },
+      })
+      revalidatePath('/')
+      revalidatePath(`/mobil/${lead.carId}`)
     }
 
     revalidatePath('/admin')
@@ -83,6 +94,19 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
 
 export async function deleteLead(id: string) {
   try {
+    const lead = await prisma.lead.findUnique({ where: { id } })
+    if (lead && lead.status === 'Disetujui' && lead.carId) {
+      await prisma.car.update({
+        where: { id: lead.carId },
+        data: {
+          isSoldOut: false,
+          badge: 'READY STOCK',
+        },
+      })
+      revalidatePath('/')
+      revalidatePath(`/mobil/${lead.carId}`)
+    }
+
     await prisma.lead.delete({
       where: { id },
     })
