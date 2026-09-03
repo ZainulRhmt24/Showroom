@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum Role {
+  USER
+  ADMIN
+  OWNER
+}
+
+enum CarTransmission {
+  Automatic
+  Manual
+}
+
+enum CarFuel {
+  Bensin
+  Diesel
+  Listrik
+  Hybrid
+}
+
+enum CarCondition {
+  Baru
+  Bekas
+}
+
+enum CarType {
+  SUV
+  MPV
+  Sedan
+  Hatchback
+  Pickup
+  Luxury
+}
+
+enum LeadType {
+  Kredit
+  Cash
+  Trade_In @map("Trade-In")
+  Kontak
+}
+
+enum LeadStatus {
+  Baru
+  Diproses
+  Disetujui
+  Ditolak
+}
+
+// MODELS
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  
+  cars      Car[]    @relation("OwnerCars")
+  leads     Lead[]   @relation("OwnerLeads")
+}
+
+model Car {
+  id           String          @id @default(cuid())
+  slug         String          @unique
+  brand        String
+  name         String
+  year         Int
+  price        Float
+  monthly      Float
+  dp           Float
+  transmission CarTransmission
+  fuel         CarFuel
+  engine       String
+  mileage      Int
+  color        String
+  type         CarType
+  condition    CarCondition
+  location     String
+  image        String
+  gallery      String[]
+  badge        String?
+  isSoldOut    Boolean         @default(false)
+  description  String
+  features     String[]
+  
+  ownerId      String
+  owner        User            @relation("OwnerCars", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  leads        Lead[]          @relation("CarLeads")
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  type      LeadType
+  name      String
+  whatsapp  String
+  email     String?
+  city      String?
+  
+  carId     String?
+  car       Car?       @relation("CarLeads", fields: [carId], references: [id], onDelete: SetNull)
+  carName   String?
+  
+  details   Json?
+  
+  status    LeadStatus @default(Baru)
+  
+  ownerId   String?
+  owner     User?      @relation("OwnerLeads", fields: [ownerId], references: [id], onDelete: SetNull)
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  quote     String
+  name      String
+  car       String
+  rating    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteContent {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
