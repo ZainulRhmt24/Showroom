@@ -22,6 +22,7 @@ export type Car = {
   description: string
   features: string[]
   ownerId?: string
+  branchId?: string
 }
 
 export const CARS: Car[] = [

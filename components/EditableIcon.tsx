@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { Edit2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useParams } from 'next/navigation'
 import {
   ShieldCheck,
   Sparkles,
@@ -55,8 +56,16 @@ export function EditableIcon({
   const isEditMode = useStore((state) => state.isEditMode)
   const dynamicContent = useStore((state) => state.dynamicContent)
   const updateDynamicContent = useStore((state) => state.updateDynamicContent)
+  const branches = useStore((state) => state.branches)
+  
+  const params = useParams()
+  const currentCabang = (params?.cabang as string) || 'jakarta'
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  const activeOwnerId = activeBranch ? activeBranch.ownerId : 'admin_owner_1'
+  
+  const namespacedKey = `${activeOwnerId}_${contentKey}`
 
-  const savedIconId = dynamicContent[contentKey]
+  const savedIconId = dynamicContent[namespacedKey]
   const displayIconId = savedIconId || defaultIconId
 
   const [isEditing, setIsEditing] = useState(false)
@@ -67,7 +76,7 @@ export function EditableIcon({
   const handleSelectIcon = (id: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateDynamicContent(contentKey, id)
+    updateDynamicContent(namespacedKey, id)
     setIsEditing(false)
     setIsHovered(false)
   }

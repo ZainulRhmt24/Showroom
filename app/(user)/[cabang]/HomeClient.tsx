@@ -3,8 +3,9 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Search, ShieldCheck, Sparkles, Calculator, GitCompareArrows, Heart, Star, ChevronLeft, ChevronRight, Clock, ThumbsUp, Store, Car as CarIcon, MessageSquarePlus, X, Award, CheckCircle, Zap } from 'lucide-react'
+import { useParams } from 'next/navigation'
 import { useStore, getActiveShowroom } from '@/store/useStore'
 import { CarCard } from '@/components/CarCard'
 import { EditableText } from '@/components/EditableText'
@@ -17,12 +18,18 @@ const ICON_MAP: Record<string, React.ElementType> = {
 function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const params = useParams()
+
   const cars = useStore((state) => state.cars)
   const currentAdminUser = useStore((state) => state.currentAdminUser)
   const adminAccounts = useStore((state) => state.adminAccounts)
+  const branches = useStore((state) => state.branches)
+  const currentCabang = (params.cabang as string) || 'jakarta'
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
 
   const showroomParam = searchParams.get('showroom')
-  const activeOwnerId = getActiveShowroom(showroomParam)
+  const activeOwnerId = showroomParam || (activeBranch ? activeBranch.ownerId : 'admin_owner_1')
+  
   const activeShowroomAcc = adminAccounts.find(
     (a) => a.id === activeOwnerId || a.ownerId === activeOwnerId
   )
@@ -35,7 +42,17 @@ function HomeContent() {
     }
   })
   const deduplicatedCars = Array.from(uniqueCarsMap.values()) as typeof cars
-  const displayCars = deduplicatedCars.filter((car) => (car.ownerId || 'admin_owner_1') === activeOwnerId)
+  let displayCars = deduplicatedCars.filter((car) => (car.ownerId || 'admin_owner_1') === activeOwnerId)
+  
+  if (activeBranch) {
+    displayCars = displayCars.filter(car => {
+      const isBranchMatch = car.branchId === activeBranch.id;
+      const isCityMatch = car.location.toLowerCase().includes(activeBranch.city.toLowerCase());
+      const isNameMatch = car.location.toLowerCase().includes(activeBranch.name.toLowerCase());
+      return isBranchMatch || isCityMatch || isNameMatch;
+    })
+  }
+
   const featuredCars = displayCars.slice(0, 6)
 
   const [brand, setBrand] = useState('')
@@ -43,6 +60,7 @@ function HomeContent() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [year, setYear] = useState('')
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +76,8 @@ function HomeContent() {
   }
 
   const [slide, setSlide] = useState(0)
-  const testimonials = useStore((state) => state.testimonials)
+  const allTestimonials = useStore((state) => state.testimonials)
+  const branchTestimonials = allTestimonials.filter(t => !t.branchId || (activeBranch && t.branchId === activeBranch.id))
   const addTestimonial = useStore((state) => state.addTestimonial)
   const siteConfig = useStore((state) => state.siteConfig)
 
@@ -73,17 +92,27 @@ function HomeContent() {
       name: reviewForm.name,
       car: reviewForm.car,
       quote: reviewForm.quote,
-      rating: reviewForm.rating
+      rating: reviewForm.rating,
+      branchId: activeBranch ? activeBranch.id : undefined
     })
     setShowReviewModal(false)
     setReviewForm({ name: '', car: '', quote: '', rating: 5 })
-    setSlide(testimonials.length)
+    setSlide(branchTestimonials.length)
   }
 
   const brands = ['Toyota', 'Honda', 'Mitsubishi', 'Suzuki', 'Hyundai', 'Mazda', 'BMW', 'Mercedes-Benz', 'Wuling', 'BYD']
 
   if (!mounted) {
-    return <div className="min-h-screen bg-background" />
+    // Return a basic skeleton instead of a blank screen to prevent the "white bug" appearance
+    // while waiting for hydration, but avoid full SSR to prevent layout shifts.
+    return (
+      <div className="min-h-screen bg-foreground flex flex-col items-center justify-center text-white">
+         <div className="animate-pulse flex flex-col items-center gap-6">
+           <div className="h-12 w-64 bg-white/20 rounded-full"></div>
+           <p className="text-white/50 text-sm">Memuat pengalaman premium...</p>
+         </div>
+      </div>
+    )
   }
 
   return (
@@ -99,7 +128,7 @@ function HomeContent() {
       )}
 
       {/* 3. HERO SECTION */}
-      <section className="relative flex min-h-screen items-end overflow-hidden bg-foreground pb-20 pt-32 text-white">
+      <section className="relative flex min-h-[100dvh] items-end overflow-hidden bg-foreground pb-20 pt-32 text-white">
         <motion.img 
           initial={{ scale: 1.1, opacity: 0 }}
           animate={{ scale: 1, opacity: 0.8 }}
@@ -153,11 +182,12 @@ function HomeContent() {
 
       {/* Hero Search Form */}
       <section className="relative z-20 mx-auto -mt-12 max-w-6xl px-5 lg:px-8">
+        {/* Desktop Search Grid */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="grid gap-3 rounded-3xl border border-border/50 bg-background/80 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
+          className="hidden md:grid gap-3 rounded-3xl border border-border/50 bg-background/80 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
         >
           <div className="relative">
             <select value={brand} onChange={e => setBrand(e.target.value)} className="h-full w-full appearance-none rounded-2xl bg-muted/50 hover:bg-muted transition-colors px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer">
@@ -168,7 +198,7 @@ function HomeContent() {
           <div className="relative">
             <select value={model} onChange={e => setModel(e.target.value)} className="h-full w-full appearance-none rounded-2xl bg-muted/50 hover:bg-muted transition-colors px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer">
               <option value="">Pilih Model (Opsional)</option>
-              {displayCars.filter(c => !brand || c.brand === brand).map((c, idx) => (
+              {mounted && displayCars.filter(c => !brand || c.brand === brand).map((c, idx) => (
                 <option key={`${c.id}-${idx}`} value={c.name}>{c.name}</option>
               ))}
             </select>
@@ -201,7 +231,93 @@ function HomeContent() {
             Cari Mobil
           </button>
         </motion.div>
+
+        {/* Mobile Search Floating Trigger */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="md:hidden flex items-center justify-center"
+        >
+          <button onClick={() => setIsMobileFilterOpen(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-2xl px-6 py-5 shadow-xl text-left text-sm font-bold">
+            <div className="flex items-center gap-3">
+              <Search className="h-5 w-5 text-primary" />
+              <span>Cari mobil idaman Anda...</span>
+            </div>
+            <div className="rounded-full bg-muted/50 p-1.5"><ArrowRight className="h-4 w-4" /></div>
+          </button>
+        </motion.div>
       </section>
+
+      {/* Mobile Search Modal */}
+      <AnimatePresence>
+        {isMobileFilterOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileFilterOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-[2.5rem] bg-background p-6 pb-safe border-t border-border shadow-2xl flex flex-col gap-5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-2xl font-bold">Filter Pencarian</h3>
+                <button onClick={() => setIsMobileFilterOpen(false)} className="rounded-full bg-muted p-2"><X className="h-5 w-5" /></button>
+              </div>
+              
+              <div className="flex flex-col gap-4 mt-2">
+                <select value={brand} onChange={e => setBrand(e.target.value)} className="w-full appearance-none rounded-2xl bg-muted/50 px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50">
+                  <option value="">Pilih Merek</option>
+                  {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+                <select value={model} onChange={e => setModel(e.target.value)} className="w-full appearance-none rounded-2xl bg-muted/50 px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50">
+                  <option value="">Pilih Model (Opsional)</option>
+                  {mounted && displayCars.filter(c => !brand || c.brand === brand).map((c, idx) => (
+                    <option key={`${c.id}-${idx}`} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <select value={minPrice} onChange={e => setMinPrice(e.target.value)} className="w-full appearance-none rounded-2xl bg-muted/50 px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50">
+                    <option value="">Harga Min</option>
+                    <option value="100000000">100 Jt</option>
+                    <option value="500000000">500 Jt</option>
+                    <option value="1000000000">1 M</option>
+                  </select>
+                  <select value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="w-full appearance-none rounded-2xl bg-muted/50 px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50">
+                    <option value="">Harga Max</option>
+                    <option value="500000000">500 Jt</option>
+                    <option value="1000000000">1 M</option>
+                    <option value="2000000000">2 M</option>
+                  </select>
+                </div>
+                <select value={year} onChange={e => setYear(e.target.value)} className="w-full appearance-none rounded-2xl bg-muted/50 px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50">
+                  <option value="">Tahun Mobil</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2022">2022</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={() => {
+                  setIsMobileFilterOpen(false)
+                  handleSearch()
+                }} 
+                className="mt-4 w-full rounded-full bg-primary py-4 text-sm font-bold text-primary-foreground shadow-lg hover:bg-primary/90"
+              >
+                Tampilkan Hasil
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 4. SECTION MOBIL UNGGULAN */}
       <section id="koleksi" className="mx-auto max-w-7xl px-5 py-32 lg:px-8">
@@ -221,9 +337,11 @@ function HomeContent() {
             <p className="text-muted-foreground animate-pulse">Memuat koleksi mobil...</p>
           </div>
         ) : featuredCars.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex overflow-x-auto snap-x snap-mandatory pb-8 -mx-5 px-5 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 scrollbar-hide">
             {featuredCars.map((car, i) => (
-              <CarCard key={`${car.id}-${i}`} car={car} index={i} />
+              <div key={`${car.id}-${i}`} className="snap-center shrink-0 w-[85vw] md:w-auto">
+                <CarCard car={car} index={i} />
+              </div>
             ))}
           </div>
         ) : (
@@ -283,6 +401,28 @@ function HomeContent() {
         </div>
       </section>
 
+      {/* LOKASI SHOWROOM */}
+      {mounted && activeBranch && activeBranch.address && (
+        <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
+          <div className="mb-12 text-center">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">📍 Lokasi Showroom Kami</p>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold">{activeBranch.name}</h2>
+            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">{activeBranch.address}</p>
+          </div>
+          <div className="rounded-3xl overflow-hidden border border-border/50 shadow-xl h-[400px] w-full bg-muted relative">
+            <iframe 
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(activeBranch.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+              width="100%" 
+              height="100%" 
+              style={{ border: 0 }} 
+              allowFullScreen 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </section>
+      )}
+
       {/* 12. TESTIMONI */}
       <section id="testimoni" className="mx-auto max-w-7xl px-5 py-32 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
@@ -298,10 +438,10 @@ function HomeContent() {
               <MessageSquarePlus className="h-4 w-4" /> Tulis Ulasan Anda
             </button>
             <div className="flex gap-3">
-              <button aria-label="Testimoni sebelumnya" onClick={() => setSlide((slide + testimonials.length - 1) % testimonials.length)} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary">
+              <button aria-label="Testimoni sebelumnya" onClick={() => { if (branchTestimonials.length) setSlide((slide + branchTestimonials.length - 1) % branchTestimonials.length) }} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary">
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <button aria-label="Testimoni berikutnya" onClick={() => setSlide((slide + 1) % testimonials.length)} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary">
+              <button aria-label="Testimoni berikutnya" onClick={() => { if (branchTestimonials.length) setSlide((slide + 1) % branchTestimonials.length) }} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary">
                 <ChevronRight className="h-5 w-5" />
               </button>
             </div>
@@ -314,34 +454,40 @@ function HomeContent() {
           </button>
         </div>
         
-        <div className="relative overflow-hidden">
-          <motion.div 
-            key={slide}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-4xl rounded-[2.5rem] bg-secondary p-10 sm:p-16 border border-border/50 shadow-xl"
-          >
-            <div className="mb-8 flex gap-1 text-primary">
-              {[1,2,3,4,5].map(s => <Star key={s} className={`h-5 w-5 ${s <= (testimonials[slide]?.rating || 5) ? 'fill-current' : 'text-muted-foreground/30'}`} />)}
-            </div>
-            <blockquote className="font-display text-3xl font-semibold leading-relaxed sm:text-4xl text-foreground">
-              “{testimonials[slide].quote}”
-            </blockquote>
-            <div className="mt-12 flex items-center gap-5">
-              <div className="h-14 w-14 rounded-full bg-muted overflow-hidden">
-                <div className="h-full w-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xl">
-                  {testimonials[slide].name.charAt(0)}
+        {branchTestimonials.length > 0 ? (
+          <div className="relative overflow-hidden">
+            <motion.div 
+              key={slide}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-4xl rounded-[2.5rem] bg-secondary p-10 sm:p-16 border border-border/50 shadow-xl"
+            >
+              <div className="mb-8 flex gap-1 text-primary">
+                {[1,2,3,4,5].map(s => <Star key={s} className={`h-5 w-5 ${s <= (mounted && branchTestimonials[slide]?.rating ? branchTestimonials[slide].rating : 5) ? 'fill-current' : 'text-muted-foreground/30'}`} />)}
+              </div>
+              <blockquote className="font-display text-3xl font-semibold leading-relaxed sm:text-4xl text-foreground">
+                “{mounted && branchTestimonials[slide] ? branchTestimonials[slide].quote : 'Memuat ulasan...'}”
+              </blockquote>
+              <div className="mt-12 flex items-center gap-5">
+                <div className="h-14 w-14 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full w-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xl">
+                    {mounted && branchTestimonials[slide] ? branchTestimonials[slide].name.charAt(0) : '?'}
+                  </div>
+                </div>
+                <div>
+                  <p className="font-bold text-lg">{mounted && branchTestimonials[slide] ? branchTestimonials[slide].name : 'Pelanggan'}</p>
+                  <p className="text-sm font-medium text-primary">Pemilik {mounted && branchTestimonials[slide] ? branchTestimonials[slide].car : 'Mobil Premium'}</p>
                 </div>
               </div>
-              <div>
-                <p className="font-bold text-lg">{testimonials[slide].name}</p>
-                <p className="text-sm font-medium text-primary">Pemilik {testimonials[slide].car}</p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-border p-12 text-center bg-card/30">
+            <p className="text-muted-foreground font-medium">Belum ada ulasan untuk showroom ini.</p>
+          </div>
+        )}
 
         {/* Review Modal */}
         {showReviewModal && (
@@ -426,10 +572,18 @@ function HomeContent() {
 }
 
 export default function HomeClient({ initialCars }: { initialCars: any[] }) {
-  // Update state Zustand dengan data dari Supabase
   useEffect(() => {
     if (initialCars && initialCars.length > 0) {
-      useStore.setState({ cars: initialCars })
+      useStore.setState((state) => {
+        const mergedCars = [...initialCars];
+        const initialCarIds = new Set(initialCars.map((c: any) => c.id));
+        state.cars.forEach((c) => {
+          if (!initialCarIds.has(c.id)) {
+            mergedCars.push(c);
+          }
+        });
+        return { cars: mergedCars };
+      });
     }
   }, [initialCars])
 

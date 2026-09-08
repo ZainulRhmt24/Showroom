@@ -40,9 +40,11 @@ import {
   Heart,
   Award,
   CheckCircle,
-  Zap
+  Zap,
+  Store,
+  ChevronRight
 } from 'lucide-react'
-import { useStore, Lead, AdminAccount } from '@/store/useStore'
+import { useStore, Lead, AdminAccount, Branch } from '@/store/useStore'
 import { Car } from '@/data/cars'
 
 const formatIDR = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
@@ -264,6 +266,8 @@ export default function AdminDashboardPage() {
 
   const cars = deduplicatedRawCars.filter((c) => (c.ownerId || 'admin_owner_1') === activeOwnerId)
   const leads = rawLeads.filter((l) => (l.ownerId || 'admin_owner_1') === activeOwnerId)
+  const branches = useStore((state) => state.branches)
+  const myBranches = branches.filter((b) => (b.ownerId || 'admin_owner_1') === activeOwnerId)
 
   const isAdminLoggedIn = useStore((state) => state.isAdminLoggedIn)
   const adminLogin = useStore((state) => state.adminLogin)
@@ -279,6 +283,8 @@ export default function AdminDashboardPage() {
   const deleteCar = useStore((state) => state.deleteCar)
   const updateLeadStatus = useStore((state) => state.updateLeadStatus)
   const deleteLead = useStore((state) => state.deleteLead)
+  const testimonials = useStore((state) => state.testimonials)
+  const deleteTestimonial = useStore((state) => state.deleteTestimonial)
 
   const registerAdmin = useStore((state) => state.registerAdmin)
   const requestMasterKeyEmail = useStore((state) => state.requestMasterKeyEmail)
@@ -286,6 +292,11 @@ export default function AdminDashboardPage() {
   const clearEmailNotification = useStore((state) => state.clearEmailNotification)
   const siteConfig = useStore((state) => state.siteConfig)
   const updateSiteConfig = useStore((state) => state.updateSiteConfig)
+
+
+  const addBranch = useStore((state) => state.addBranch)
+  const updateBranch = useStore((state) => state.updateBranch)
+  const deleteBranch = useStore((state) => state.deleteBranch)
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -325,9 +336,12 @@ export default function AdminDashboardPage() {
   // Register Form States
   const [regName, setRegName] = useState('')
   const [regEmail, setRegEmail] = useState('')
+  const [regPhone, setRegPhone] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirmPassword, setRegConfirmPassword] = useState('')
   const [regRole, setRegRole] = useState<'Owner' | 'Manager' | 'Sales Admin'>('Owner')
+  const [regShowroomCity, setRegShowroomCity] = useState('')
+  const [regShowroomAddress, setRegShowroomAddress] = useState('')
   const [regMasterKey, setRegMasterKey] = useState('')
   const [regError, setRegError] = useState('')
   const [regSuccess, setRegSuccess] = useState('')
@@ -335,11 +349,19 @@ export default function AdminDashboardPage() {
   const [copiedKey, setCopiedKey] = useState(false)
 
   // Admin Dashboard Tabs & Filters
-  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'leads' | 'settings'>('leads')
+  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'leads' | 'branches' | 'ratings'>('leads')
   const [searchTerm, setSearchTerm] = useState('')
   const [leadStatusFilter, setLeadStatusFilter] = useState<'Semua' | 'Baru' | 'Diproses' | 'Disetujui' | 'Ditolak'>('Semua')
   const [carStatusFilter, setCarStatusFilter] = useState<'Semua' | 'Tersedia' | 'Terjual'>('Semua')
   const [desktopPermission, setDesktopPermission] = useState<string>('default')
+
+  // Branch Management States
+  const [showBranchModal, setShowBranchModal] = useState(false)
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
+  const [expandedBranchId, setExpandedBranchId] = useState<string | null>(null)
+  const [branchForm, setBranchForm] = useState<Partial<Branch>>({
+    name: '', city: '', address: '', mapUrl: ''
+  })
 
   const [configForm, setConfigForm] = useState(siteConfig)
   const [saveConfigToast, setSaveConfigToast] = useState(false)
@@ -443,14 +465,25 @@ export default function AdminDashboardPage() {
       return
     }
 
+    if (regRole === 'Owner' && (!regShowroomCity.trim() || !regShowroomAddress.trim())) {
+      setRegError('Kota dan Alamat Showroom wajib diisi untuk Pendaftaran Owner!')
+      return
+    }
+
     const res = registerAdmin(
       {
         name: regName,
         email: regEmail,
         password: regPassword,
         role: regRole,
+        phone: regPhone
       },
-      regMasterKey
+      regMasterKey,
+      regRole === 'Owner' ? {
+        name: 'Showroom Pusat',
+        city: regShowroomCity,
+        address: regShowroomAddress
+      } : undefined
     )
 
     if (!res.success) {
@@ -476,7 +509,8 @@ export default function AdminDashboardPage() {
       color: 'Hitam Metallic',
       type: 'SUV',
       condition: 'Bekas',
-      location: 'Jakarta Selatan',
+      branchId: myBranches[0]?.id || '',
+      location: myBranches[0]?.city || 'Jakarta Selatan',
       image: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=1200&q=85',
       gallery: [],
       badge: 'NEW',
@@ -488,7 +522,7 @@ export default function AdminDashboardPage() {
 
   const openEditCarModal = (car: Car) => {
     setEditingCarId(car.id)
-    setCarForm(car)
+    setCarForm({ ...carForm, branchId: car.branchId || myBranches[0]?.id || '' })
     setShowCarModal(true)
   }
 
@@ -500,10 +534,14 @@ export default function AdminDashboardPage() {
   }
 
   const handleImportPresets = () => {
-    CAR_PRESETS.forEach((preset) => {
+    const ownerBranch = myBranches[0]
+    CAR_PRESETS.forEach((preset, index) => {
       addCar({
         ...preset,
+        id: `car_preset_${Date.now()}_${index}`,
         ownerId: activeOwnerId,
+        branchId: ownerBranch?.id || '',
+        location: ownerBranch?.city || preset.location,
         gallery: [preset.image],
       })
     })
@@ -615,12 +653,16 @@ export default function AdminDashboardPage() {
     setTimeout(() => setUploadSuccessToast(false), 4000)
   }
 
-  const filteredLeads = leads.filter((l) => {
+  const myCars = cars.filter(c => (c.ownerId || 'admin_owner_1') === activeOwnerId)
+  const myLeads = leads.filter(l => (l.ownerId || 'admin_owner_1') === activeOwnerId)
+  const myTestimonials = testimonials.filter(t => !t.branchId || myBranches.some(b => b.id === t.branchId))
+
+  const filteredLeads = myLeads.filter((l) => {
     if (leadStatusFilter === 'Semua') return true
     return l.status === leadStatusFilter
   })
 
-  const filteredCars = cars.filter((c) => {
+  const filteredCars = myCars.filter((c) => {
     const matchesSearch =
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.brand.toLowerCase().includes(searchTerm.toLowerCase())
@@ -631,7 +673,8 @@ export default function AdminDashboardPage() {
     return true
   })
 
-  const newLeadsCount = leads.filter((l) => l.status === 'Baru').length
+  const newLeadsCount = myLeads.filter((l) => l.status === 'Baru').length
+  const unprocessedLeadsCount = myLeads.filter((l) => l.status === 'Baru' || l.status === 'Diproses').length
 
   // LOGIN & REGISTRATION SCREEN FOR UNAUTHENTICATED USERS
   
@@ -836,6 +879,18 @@ export default function AdminDashboardPage() {
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="Contoh: Hendra Wijaya"
+                  className="w-full rounded-2xl border border-border bg-muted/30 p-3.5 text-sm outline-none focus:border-primary focus:bg-card mb-4 transition-all"
+                />
+
+                <label className="text-xs font-bold uppercase tracking-wider mb-1.5 block text-muted-foreground">
+                  Nomor Telepon / WA *
+                </label>
+                <input
+                  required
+                  type="tel"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="Contoh: 08123456789"
                   className="w-full rounded-2xl border border-border bg-muted/30 p-3.5 text-sm outline-none focus:border-primary focus:bg-card transition-all"
                 />
               </div>
@@ -870,6 +925,42 @@ export default function AdminDashboardPage() {
                   </select>
                 </div>
               </div>
+
+              {regRole === 'Owner' && (
+                <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-primary font-bold text-sm mb-2">
+                    <Store className="h-4 w-4" /> Detail Showroom Anda
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold uppercase tracking-wider mb-1.5 block text-muted-foreground">
+                        Kota *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={regShowroomCity}
+                        onChange={(e) => setRegShowroomCity(e.target.value)}
+                        placeholder="Contoh: Jakarta"
+                        className="w-full rounded-2xl border border-border bg-muted/30 p-3.5 text-sm outline-none focus:border-primary focus:bg-card transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider mb-1.5 block text-muted-foreground">
+                      Alamat Showroom *
+                    </label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={regShowroomAddress}
+                      onChange={(e) => setRegShowroomAddress(e.target.value)}
+                      placeholder="Contoh: Jl. Jend. Sudirman No. 1..."
+                      className="w-full rounded-2xl border border-border bg-muted/30 p-3.5 text-sm outline-none focus:border-primary focus:bg-card transition-all resize-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1000,6 +1091,13 @@ export default function AdminDashboardPage() {
                 </span>
               )}
             </button>
+
+            <button onClick={() => setActiveTab('branches')} className={`flex w-full items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${activeTab === 'branches' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+              <Store className={`h-6 w-6`} /> Cabang
+            </button>
+            <button onClick={() => setActiveTab('ratings')} className={`flex w-full items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${activeTab === 'ratings' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+              <Star className={`h-6 w-6`} /> Ulasan & Rating
+            </button>
           </nav>
         </div>
         <div className="p-8 border-t border-border/50 bg-muted/10">
@@ -1022,25 +1120,14 @@ export default function AdminDashboardPage() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-secondary/20">
         
         {/* MOBILE HEADER (Only visible on small screens) */}
-        <header className="lg:hidden flex flex-col gap-4 p-5 bg-card border-b border-border shadow-sm z-30 shrink-0">
-           <div className="flex items-center justify-between">
-             <div className="font-display font-black tracking-widest text-2xl text-primary">DENKEN<span className="text-foreground">.</span></div>
-             <button onClick={adminLogout} className="text-destructive p-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
-               <LogOut className="h-5 w-5" />
-             </button>
-           </div>
-           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-             <button onClick={() => setActiveTab('overview')} className={`shrink-0 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${activeTab === 'overview' ? 'bg-primary text-white shadow-md' : 'bg-muted border border-border text-muted-foreground'}`}>Ringkasan</button>
-             <button onClick={() => setActiveTab('cars')} className={`shrink-0 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cars' ? 'bg-primary text-white shadow-md' : 'bg-muted border border-border text-muted-foreground'}`}>Inventaris</button>
-             <button onClick={() => setActiveTab('leads')} className={`shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${activeTab === 'leads' ? 'bg-primary text-white shadow-md' : 'bg-muted border border-border text-muted-foreground'}`}>
-               Prospek
-               {newLeadsCount > 0 && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white animate-pulse shadow-sm">{newLeadsCount}</span>}
-             </button>
-             <button onClick={() => setActiveTab('settings')} className={`shrink-0 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${activeTab === 'settings' ? 'bg-primary text-white shadow-md' : 'bg-muted border border-border text-muted-foreground'}`}>Pengaturan</button>
-           </div>
+        <header className="lg:hidden flex items-center justify-between p-5 bg-card border-b border-border shadow-sm z-30 shrink-0">
+          <div className="font-display font-black tracking-widest text-2xl text-primary">DENKEN<span className="text-foreground">.</span></div>
+          <button onClick={adminLogout} className="text-destructive p-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
+            <LogOut className="h-5 w-5" />
+          </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-5 md:p-10 pb-32">
+        <div className="flex-1 overflow-y-auto p-5 md:p-10 pb-28 md:pb-10">
           <div className="mx-auto max-w-7xl">
           
             {/* UNREAD LEADS ALERT BANNER */}
@@ -1076,7 +1163,9 @@ export default function AdminDashboardPage() {
                   {activeTab === 'overview' && 'Ringkasan Bisnis'}
                   {activeTab === 'cars' && 'Inventaris Mobil'}
                   {activeTab === 'leads' && 'Prospek Pelanggan'}
-                  {activeTab === 'settings' && 'Pengaturan Website'}
+
+                  {activeTab === 'branches' && 'Manajemen Cabang'}
+                  {activeTab === 'ratings' && 'Ulasan & Rating'}
                 </h1>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -1085,19 +1174,6 @@ export default function AdminDashboardPage() {
                     <Bell className="h-4 w-4" /> Notifikasi
                   </button>
                 )}
-
-                <button
-                  onClick={() => {
-                    const session = sessionStorage.getItem('denken_admin_session')
-                    if (session) {
-                      localStorage.setItem('denken_temp_transfer', session)
-                    }
-                    window.open(`/?showroom=${activeOwnerId}`, '_blank')
-                  }}
-                  className="inline-flex items-center gap-2.5 rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-[1.02]"
-                >
-                  <Eye className="h-4 w-4" /> Pratinjau Website
-                </button>
               </div>
             </div>
 
@@ -1149,19 +1225,20 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            <div className="rounded-3xl border border-border/60 bg-card shadow-xl overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border/50 bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    <th className="p-5">Tipe Aplikasi</th>
-                    <th className="p-5">Nama Pemohon</th>
-                    <th className="p-5">Hubungi WhatsApp</th>
-                    <th className="p-5">Detail Kebutuhan</th>
-                    <th className="p-5">Status Aplikasi</th>
-                    <th className="p-5 text-right">Tindakan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 text-sm font-medium">
+            <div className="rounded-3xl border border-border/60 bg-card shadow-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] text-left border-collapse hidden md:table">
+                  <thead>
+                    <tr className="border-b border-border/50 bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <th className="p-5">Tipe Aplikasi</th>
+                      <th className="p-5">Nama Pemohon</th>
+                      <th className="p-5">Hubungi WhatsApp</th>
+                      <th className="p-5">Detail Kebutuhan</th>
+                      <th className="p-5">Status Aplikasi</th>
+                      <th className="p-5 text-right">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40 text-sm font-medium">
                   {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
@@ -1259,6 +1336,62 @@ export default function AdminDashboardPage() {
                   ))}
                 </tbody>
               </table>
+              
+              {/* MOBILE LEADS LIST */}
+              <div className="md:hidden flex flex-col divide-y divide-border/40">
+                {filteredLeads.map((lead) => (
+                  <div key={lead.id} className="p-4 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          {lead.status === 'Baru' && <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />}
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider ${
+                              lead.type === 'Kredit' ? 'bg-blue-500/10 text-blue-600' : lead.type === 'Trade-In' ? 'bg-amber-500/10 text-amber-600' : 'bg-purple-500/10 text-purple-600'
+                          }`}>
+                            {lead.type}
+                          </span>
+                        </div>
+                        <p className="font-bold text-base text-foreground mt-1">{lead.name}</p>
+                        <p className="text-xs text-muted-foreground">{lead.city || '-'}</p>
+                      </div>
+                      <button onClick={() => { if (confirm('Hapus lead ini?')) deleteLead(lead.id) }} className="p-2 bg-muted/50 rounded-xl text-destructive hover:bg-destructive hover:text-white transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="bg-muted/20 p-3 rounded-xl border border-border/50">
+                      <p className="font-semibold text-xs text-primary mb-1">{lead.carName || '-'}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">{JSON.stringify(lead.details)}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={lead.status}
+                        onChange={(e) => updateLeadStatus(lead.id, e.target.value as Lead['status'])}
+                        className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-bold outline-none border cursor-pointer ${
+                          lead.status === 'Baru' ? 'border-rose-500 bg-rose-50 text-rose-700' : lead.status === 'Diproses' ? 'border-amber-500 bg-amber-50 text-amber-700' : lead.status === 'Disetujui' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-zinc-500 bg-zinc-50 text-zinc-700'
+                        }`}
+                      >
+                        <option value="Baru">🔴 Baru</option>
+                        <option value="Diproses">🟡 Diproses</option>
+                        <option value="Disetujui">🟢 Deal</option>
+                        <option value="Ditolak">⚪ Batal</option>
+                      </select>
+                      
+                      <a
+                        href={buildAdminWaUrl(lead)}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => { if (lead.status === 'Baru') updateLeadStatus(lead.id, 'Diproses') }}
+                        className="flex items-center justify-center bg-emerald-500 text-white p-2.5 rounded-xl shadow-sm active:scale-95 transition-all"
+                      >
+                        <PhoneCall className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </div>
               {filteredLeads.length === 0 && (
                 <div className="p-12 text-center space-y-3">
                   <Users className="h-12 w-12 text-muted-foreground/30 mx-auto" />
@@ -1317,25 +1450,34 @@ export default function AdminDashboardPage() {
 
               <button
                 onClick={openAddCarModal}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 shrink-0"
+                className="hidden md:inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 shrink-0"
               >
                 <Plus className="h-4 w-4" /> + Upload Unit Mobil Baru
               </button>
+              
+              {/* MOBILE FAB ADD CAR */}
+              <button
+                onClick={openAddCarModal}
+                className="md:hidden fixed bottom-24 right-5 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-[0_8px_30px_rgb(0,0,0,0.3)] shadow-primary/40 flex items-center justify-center active:scale-90 transition-all border border-primary-foreground/20"
+              >
+                <Plus className="h-6 w-6" />
+              </button>
             </div>
 
-            <div className="overflow-x-auto rounded-3xl border border-border/60 bg-card shadow-xl">
-              <table className="w-full min-w-[850px] text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border/50 bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    <th className="p-5">Unit Mobil</th>
-                    <th className="p-5">Merek & Tahun</th>
-                    <th className="p-5">Harga OTR</th>
-                    <th className="p-5">Cicilan / Bln</th>
-                    <th className="p-5">Status Unit</th>
-                    <th className="p-5 text-right">Tindakan Admin</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 text-sm font-medium">
+            <div className="overflow-hidden rounded-3xl border border-border/60 bg-card shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] text-left border-collapse hidden md:table">
+                  <thead>
+                    <tr className="border-b border-border/50 bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <th className="p-5">Unit Mobil</th>
+                      <th className="p-5">Merek & Tahun</th>
+                      <th className="p-5">Harga OTR</th>
+                      <th className="p-5">Cicilan / Bln</th>
+                      <th className="p-5">Status Unit</th>
+                      <th className="p-5 text-right">Tindakan Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40 text-sm font-medium">
                   {filteredCars.map((car, idx) => {
                     const isSold = car.isSoldOut || car.badge === 'SOLD OUT'
                     return (
@@ -1419,6 +1561,40 @@ export default function AdminDashboardPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* MOBILE CARS LIST */}
+              <div className="md:hidden flex flex-col divide-y divide-border/40">
+                {filteredCars.map((car, idx) => {
+                  const isSold = car.isSoldOut || car.badge === 'SOLD OUT'
+                  return (
+                    <div key={`${car.id}-${idx}`} className="p-4 flex gap-4">
+                      <div className="relative shrink-0">
+                        <img src={car.image} alt={car.name} className="h-20 w-20 object-cover object-center rounded-2xl border border-border/50" />
+                        {isSold && (
+                          <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] rounded-2xl flex items-center justify-center">
+                            <span className="text-[8px] font-black tracking-widest text-white bg-rose-600 px-1.5 py-0.5 rounded-full border border-white/20">SOLD</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <h4 className="font-bold text-sm text-foreground truncate">{car.name}</h4>
+                        <p className="text-[10px] text-muted-foreground">{car.brand} • {car.year}</p>
+                        <p className="font-display font-black text-sm text-primary mt-1">{formatIDR(car.price)}</p>
+                        
+                        <div className="flex items-center gap-2 mt-3">
+                          <button onClick={() => openEditCarModal(car)} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-muted py-2 text-[10px] font-bold text-foreground active:scale-95 transition-all border border-border">
+                            <Edit className="h-3 w-3" /> Edit
+                          </button>
+                          <button onClick={() => { if (confirm(`Yakin ingin menghapus ${car.name}?`)) deleteCar(car.id) }} className="p-2 rounded-xl bg-destructive/10 text-destructive active:scale-95 transition-all border border-destructive/20">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              </div>
               {filteredCars.length === 0 && (
                 <div className="p-12 text-center space-y-4">
                   <CarIcon className="h-12 w-12 text-muted-foreground/30 mx-auto" />
@@ -1522,9 +1698,9 @@ export default function AdminDashboardPage() {
           return (
             <div className="space-y-8 animate-in fade-in duration-300">
               {/* 3 Summary Stat KPI Cards */}
-              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-3 mb-8">
+              <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 mb-8 snap-x snap-mandatory pb-4 scrollbar-hide -mx-5 px-5 md:mx-0 md:px-0">
                 {/* CARD 1: TOTAL ASET */}
-                <div className="group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
+                <div className="w-[85vw] md:w-auto shrink-0 snap-center group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
                   <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
                   <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -1546,7 +1722,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* CARD 2: TOTAL OMZET */}
-                <div className="group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
+                <div className="w-[85vw] md:w-auto shrink-0 snap-center group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
                   <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors"></div>
                   <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500">
@@ -1568,7 +1744,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* CARD 3: PROSPEK AKTIF */}
-                <div className="group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
+                <div className="w-[85vw] md:w-auto shrink-0 snap-center group rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-lg transition-all relative overflow-hidden">
                   <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors"></div>
                   <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500">
@@ -1591,10 +1767,10 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* ACTIONABLE PANELS */}
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-6 snap-x snap-mandatory pb-4 scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0">
                 
                 {/* RECENT LEADS TABLE */}
-                <div className="rounded-3xl border border-border/60 bg-card p-7 shadow-sm">
+                <div className="w-[90vw] lg:w-auto shrink-0 snap-center rounded-3xl border border-border/60 bg-card p-7 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                     <div>
                       <h3 className="font-display text-lg font-bold">Prospek Pelanggan Terbaru</h3>
@@ -1644,7 +1820,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* TOP CAR DEMAND LIST */}
-                <div className="rounded-3xl border border-border/60 bg-card p-7 shadow-sm">
+                <div className="w-[90vw] lg:w-auto shrink-0 snap-center rounded-3xl border border-border/60 bg-card p-7 shadow-sm">
                   <div className="mb-6">
                     <h3 className="font-display text-lg font-bold">3 Mobil Paling Dicari</h3>
                     <p className="text-xs text-muted-foreground">Unit dengan tingkat peminatan tertinggi minggu ini.</p>
@@ -1693,10 +1869,205 @@ export default function AdminDashboardPage() {
             </div>
           )
         })()}
+        {activeTab === 'branches' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-3xl shadow-sm border border-border/50 relative overflow-hidden">
+              <div className="relative z-10">
+                <h2 className="font-display text-xl font-bold text-foreground">Manajemen Cabang Showroom</h2>
+                <p className="text-sm text-muted-foreground mt-1">Kelola data cabang dan lokasi peta untuk website.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingBranchId(null)
+                  setBranchForm({ name: '', city: '', address: '', mapUrl: '' })
+                  setShowBranchModal(true)
+                }}
+                className="relative z-10 flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105"
+              >
+                + Tambah Cabang
+              </button>
+            </div>
 
-        {/* Settings tab removed */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myBranches.map(branch => {
+                const isExpanded = expandedBranchId === branch.id
+                return (
+                <div key={branch.id} className="bg-card rounded-3xl p-6 border border-border/60 shadow-sm relative overflow-hidden flex flex-col transition-all">
+                  <div 
+                    className="flex justify-between items-center cursor-pointer group"
+                    onClick={() => setExpandedBranchId(isExpanded ? null : branch.id)}
+                  >
+                    <div>
+                      <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{branch.name}</h3>
+                      <p className="text-xs text-muted-foreground">{branch.city}</p>
+                    </div>
+                    <div className={`p-2 rounded-full bg-muted transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-border/50 animate-in slide-in-from-top-2 flex flex-col gap-4">
+                      <p className="text-sm flex-1">{branch.address}</p>
+                      <div className="text-sm border-l-2 border-primary pl-3 py-2 bg-primary/5 rounded-r-lg">
+                        <span className="font-bold block text-xs text-muted-foreground mb-1">JADWAL OPERASIONAL</span>
+                        <span className="font-medium text-foreground">{branch.openDays || 'Senin - Minggu'}</span>: <span className="text-primary font-bold">{branch.openHours || '09:00 - 20:00'}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingBranchId(branch.id)
+                            setBranchForm(branch)
+                            setShowBranchModal(true)
+                          }}
+                          className="rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                        >
+                          Edit Data
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('Yakin ingin menghapus cabang ini?')) {
+                              deleteBranch(branch.id)
+                            }
+                          }}
+                          className="rounded-xl bg-rose-500/10 py-2.5 text-xs font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
+                        >
+                          Hapus
+                        </button>
+                        <a
+                          href={`/${branch.city.toLowerCase().replace(/\s+/g, '-')}?showroom=${activeOwnerId}`}
+                          target="_blank"
+                          className="rounded-xl bg-amber-500/10 py-2.5 text-xs font-bold text-amber-600 hover:bg-amber-500 hover:text-white transition-colors text-center flex items-center justify-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Pratinjau
+                        </a>
+                        <a
+                          href={`/${branch.city.toLowerCase().replace(/\s+/g, '-')}?edit=true&showroom=${activeOwnerId}`}
+                          className="rounded-xl bg-purple-500/10 py-2.5 text-xs font-bold text-purple-600 hover:bg-purple-500 hover:text-white transition-colors text-center flex items-center justify-center gap-1"
+                        >
+                          <Edit className="h-3 w-3" /> Edit Tampilan
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )})}
+            </div>
+          </div>
+        )}
 
       </div>
+
+      {/* MODAL TAMBAH/EDIT CABANG */}
+      {showBranchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border p-8 shadow-2xl my-8 text-foreground">
+            <button
+              onClick={() => setShowBranchModal(false)}
+              className="absolute top-6 right-6 rounded-full bg-muted p-2 hover:bg-muted/80"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="mb-6">
+              <h2 className="font-display text-2xl font-bold">{editingBranchId ? 'Edit Cabang' : 'Tambah Cabang Baru'}</h2>
+              <p className="text-xs text-muted-foreground">Detail lokasi ini akan ditampilkan pada web pengunjung.</p>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              if (editingBranchId) {
+                updateBranch(editingBranchId, branchForm)
+              } else {
+                addBranch(branchForm as any)
+              }
+              setShowBranchModal(false)
+            }} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold mb-1.5 block text-muted-foreground">Nama Cabang</label>
+                <input required type="text" value={branchForm.name} onChange={e => setBranchForm({...branchForm, name: e.target.value})} className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm" placeholder="DENKEN Jakarta Pusat" />
+              </div>
+              <div>
+                <label className="text-xs font-bold mb-1.5 block text-muted-foreground">Kota</label>
+                <input required type="text" value={branchForm.city} onChange={e => setBranchForm({...branchForm, city: e.target.value})} className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm" placeholder="Jakarta" />
+              </div>
+              <div>
+                <label className="text-xs font-bold mb-1.5 block text-muted-foreground">Alamat Lengkap (Otomatis Tampil di Peta)</label>
+                <textarea required rows={3} value={branchForm.address} onChange={e => setBranchForm({...branchForm, address: e.target.value})} className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm resize-none focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Masukkan alamat lengkap cabang di sini..." />
+                <p className="text-xs text-muted-foreground mt-1">Google Maps akan secara otomatis mendeteksi alamat ini, Anda tidak perlu memasukkan link/kode apapun.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block text-muted-foreground">Hari Buka</label>
+                  <input type="text" value={branchForm.openDays || ''} onChange={e => setBranchForm({...branchForm, openDays: e.target.value})} className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm" placeholder="Senin - Minggu" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block text-muted-foreground">Jam Buka</label>
+                  <input type="text" value={branchForm.openHours || ''} onChange={e => setBranchForm({...branchForm, openHours: e.target.value})} className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm" placeholder="09:00 - 20:00" />
+                </div>
+              </div>
+              <button type="submit" className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 mt-4 transition-all hover:scale-[1.02]">
+                {editingBranchId ? 'Simpan Perubahan' : 'Tambah Cabang'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+        {/* TAB 5: ULASAN & RATING */}
+        {activeTab === 'ratings' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="font-display text-xl font-bold">Ulasan & Rating Pelanggan</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Kelola testimoni yang ditampilkan di website. Hapus rating buruk jika ada.</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {myTestimonials.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed border-border rounded-2xl bg-muted/20">
+                    <Star className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    <p className="font-bold">Belum ada ulasan</p>
+                    <p className="text-xs mt-1">Testimoni yang ditambahkan akan muncul di sini.</p>
+                  </div>
+                ) : (
+                  myTestimonials.map((t) => (
+                    <div key={t.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm relative group overflow-hidden flex flex-col justify-between">
+                      <div>
+                        <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-gradient-to-l from-card via-card to-transparent pl-8">
+                          <button
+                            onClick={() => {
+                              if (confirm('Yakin ingin menghapus ulasan ini secara permanen?')) {
+                                deleteTestimonial(t.id)
+                              }
+                            }}
+                            className="rounded-full bg-rose-500/10 p-2 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20"
+                            title="Hapus Ulasan"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        
+                        <div className="flex gap-1 mb-3 text-amber-500">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < t.rating ? 'fill-current' : 'text-muted-foreground opacity-30'}`} />
+                          ))}
+                        </div>
+                        <p className="text-sm text-foreground italic mb-4">"{t.quote}"</p>
+                      </div>
+                      <div className="pt-4 border-t border-border/50 flex flex-col mt-auto">
+                        <span className="font-bold text-sm text-primary">{t.name}</span>
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {t.car} {t.branchId ? `(${myBranches.find(b => b.id === t.branchId)?.city || ''})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* MODAL UPLOAD / EDIT MOBIL DEDIKASI OWNER */}
       {showCarModal && (
@@ -1858,6 +2229,25 @@ export default function AdminDashboardPage() {
                     <option value="PROMO">PROMO</option>
                     <option value="LUXURY">LUXURY</option>
                     <option value="READY STOCK">READY STOCK</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">
+                    Lokasi Cabang *
+                  </label>
+                  <select
+                    required
+                    value={carForm.branchId || ''}
+                    onChange={(e) => {
+                      const selBranch = branches.find(b => b.id === e.target.value)
+                      setCarForm({ ...carForm, branchId: e.target.value, location: selBranch?.city || carForm.location })
+                    }}
+                    className="w-full rounded-xl border border-border bg-muted/40 p-3.5 text-sm outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="" disabled>Pilih Cabang</option>
+                    {myBranches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -2122,6 +2512,33 @@ export default function AdminDashboardPage() {
         </div>
       )}
         </div>
+        {/* MOBILE BOTTOM NAVIGATION */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-card/80 backdrop-blur-xl border-t border-border/50 px-2 pb-safe pt-2 pb-2">
+          <button onClick={() => setActiveTab('overview')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all ${activeTab === 'overview' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <LayoutDashboard className={`h-5 w-5 ${activeTab === 'overview' ? 'fill-primary/20' : ''}`} />
+            <span className="text-[10px] font-bold">Ringkasan</span>
+          </button>
+          <button onClick={() => setActiveTab('cars')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all ${activeTab === 'cars' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <CarIcon className={`h-5 w-5 ${activeTab === 'cars' ? 'fill-primary/20' : ''}`} />
+            <span className="text-[10px] font-bold">Inventaris</span>
+          </button>
+          <button onClick={() => setActiveTab('leads')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all relative ${activeTab === 'leads' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <div className="relative">
+              <Users className={`h-5 w-5 ${activeTab === 'leads' ? 'fill-primary/20' : ''}`} />
+              {unprocessedLeadsCount > 0 && (
+                <span className="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-background">
+                  {unprocessedLeadsCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-bold">Prospek</span>
+          </button>
+          <button onClick={() => setActiveTab('ratings')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all relative ${activeTab === 'ratings' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Star className={`h-5 w-5 ${activeTab === 'ratings' ? 'fill-primary/20' : ''}`} />
+            <span className="text-[10px] font-bold">Ulasan</span>
+          </button>
+
+        </nav>
       </main>
     </div>
   )

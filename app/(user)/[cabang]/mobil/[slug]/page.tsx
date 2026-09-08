@@ -22,6 +22,7 @@ const formatIDR = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
 export default function CarDetailPage() {
   const routeParams = useParams()
   const slug = (routeParams?.slug as string) || ''
+  const cabang = (routeParams?.cabang as string) || 'jakarta'
 
   const cars = useStore((state) => state.cars)
   const car = cars.find((c) => c.slug === slug || c.id === slug)
@@ -39,7 +40,7 @@ export default function CarDetailPage() {
           Maaf, unit mobil yang Anda cari tidak ditemukan atau telah terjual. Jelajahi unit impian lainnya di katalog kami.
         </p>
         <Link
-          href="/mobil"
+          href={`/${cabang}/mobil`}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-xs font-bold text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-105"
         >
           Lihat Semua Mobil <ArrowRight className="h-4 w-4" />
@@ -63,11 +64,11 @@ export default function CarDetailPage() {
       {/* Breadcrumbs */}
       <div className="mx-auto max-w-7xl px-5 lg:px-8 py-6">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Link href="/" className="hover:text-primary transition-colors">
+          <Link href={`/${cabang}`} className="hover:text-primary transition-colors">
             Home
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
-          <Link href="/mobil" className="hover:text-primary transition-colors">
+          <Link href={`/${cabang}/mobil`} className="hover:text-primary transition-colors">
             Mobil
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
@@ -209,8 +210,11 @@ export default function CarDetailPage() {
             <div className="sticky top-28 space-y-6">
               <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-2xl">
                 <div className="mb-6">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-primary">
+                  <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
                     {car.brand} • {car.year}
+                    {car.isSoldOut && (
+                      <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white">SOLD OUT</span>
+                    )}
                   </p>
                   <h1 className="font-display text-3xl font-extrabold tracking-tight mb-2 text-foreground">
                     {car.name}
@@ -240,28 +244,37 @@ export default function CarDetailPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <Link
-                    href={`/simulasi-kredit?carId=${car.id}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 py-3.5 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:scale-[1.01] shadow-sm"
-                  >
-                    <Calculator className="h-4 w-4" /> Hitung Simulasi Kredit
-                  </Link>
+                  {car.isSoldOut ? (
+                    <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-center mb-4">
+                      <p className="font-display text-lg font-black text-red-600 mb-1">UNIT TERJUAL (SOLD OUT)</p>
+                      <p className="text-xs text-muted-foreground">Mohon maaf, unit ini sudah tidak tersedia. Silakan cek koleksi kami yang lain.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/${cabang}/simulasi-kredit?carId=${car.id}`}
+                        className="flex w-full items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 py-3.5 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:scale-[1.01] shadow-sm"
+                      >
+                        <Calculator className="h-4 w-4" /> Hitung Simulasi Kredit
+                      </Link>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <Link
-                      href={`/beli-cash?carId=${car.id}`}
-                      className="flex w-full items-center justify-center rounded-full bg-foreground py-4 text-xs font-bold text-background transition-all hover:bg-foreground/90 hover:scale-[1.02] shadow-lg"
-                    >
-                      Beli Cash
-                    </Link>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Link
+                          href={`/${cabang}/beli-cash?carId=${car.id}`}
+                          className="flex w-full items-center justify-center rounded-full bg-foreground py-4 text-xs font-bold text-background transition-all hover:bg-foreground/90 hover:scale-[1.02] shadow-lg"
+                        >
+                          Beli Cash
+                        </Link>
 
-                    <Link
-                      href={`/kredit?carId=${car.id}`}
-                      className="flex w-full items-center justify-center rounded-full bg-primary py-4 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.02] shadow-lg shadow-primary/25"
-                    >
-                      Ajukan Kredit
-                    </Link>
-                  </div>
+                        <Link
+                          href={`/${cabang}/kredit?carId=${car.id}`}
+                          className="flex w-full items-center justify-center rounded-full bg-primary py-4 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.02] shadow-lg shadow-primary/25"
+                        >
+                          Ajukan Kredit
+                        </Link>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex gap-3">
                     <a

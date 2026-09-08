@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ENUMS
@@ -65,6 +66,24 @@ model User {
   
   cars      Car[]    @relation("OwnerCars")
   leads     Lead[]   @relation("OwnerLeads")
+  branches  Branch[] @relation("OwnerBranches")
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  city      String
+  address   String
+  mapUrl    String?
+  
+  ownerId   String
+  owner     User     @relation("OwnerBranches", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  cars      Car[]    @relation("BranchCars")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Car {
@@ -93,6 +112,9 @@ model Car {
   
   ownerId      String
   owner        User            @relation("OwnerCars", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  branchId     String?
+  branch       Branch?         @relation("BranchCars", fields: [branchId], references: [id], onDelete: SetNull)
   
   leads        Lead[]          @relation("CarLeads")
 

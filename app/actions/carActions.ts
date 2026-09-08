@@ -17,6 +17,7 @@ export async function getCars() {
 }
 
 export async function createCar(data: {
+  id?: string
   slug: string
   brand: string
   name: string
@@ -41,12 +42,27 @@ export async function createCar(data: {
   ownerId?: string
 }) {
   try {
+    const targetOwnerId = data.ownerId || 'admin_owner_1';
+    
+    // Ensure User exists to prevent Foreign Key constraint error
+    const userExists = await prisma.user.findUnique({ where: { id: targetOwnerId } });
+    if (!userExists) {
+      await prisma.user.create({
+        data: {
+          id: targetOwnerId,
+          name: 'Showroom Admin',
+          email: `${targetOwnerId}@denkenmotors.id`,
+          role: 'OWNER'
+        }
+      });
+    }
+
     const car = await prisma.car.create({
       data: {
         ...data,
         gallery: data.gallery || [],
         features: data.features || [],
-        ownerId: data.ownerId || 'admin_owner_1',
+        ownerId: targetOwnerId,
       },
     })
     revalidatePath('/')

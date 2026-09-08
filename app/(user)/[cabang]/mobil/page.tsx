@@ -2,16 +2,20 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useParams } from 'next/navigation'
 import { SlidersHorizontal, Search, X, Store } from 'lucide-react'
 import { useStore, getActiveShowroom } from '@/store/useStore'
 import { CarCard } from '@/components/CarCard'
 
 function FilterContent() {
   const searchParams = useSearchParams()
+  const params = useParams()
+  const currentCabang = (params.cabang as string) || 'jakarta'
+
   const cars = useStore((state) => state.cars)
   const currentAdminUser = useStore((state) => state.currentAdminUser)
   const adminAccounts = useStore((state) => state.adminAccounts)
+  const branches = useStore((state) => state.branches)
 
   const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
@@ -22,8 +26,11 @@ function FilterContent() {
   const [priceRange, setPriceRange] = useState(initialPrice)
   const [mounted, setMounted] = useState(false)
 
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  
   const showroomParam = searchParams.get('showroom')
-  const activeOwnerId = getActiveShowroom(showroomParam)
+  const activeOwnerId = showroomParam || (activeBranch ? activeBranch.ownerId : 'admin_owner_1')
+  
   const activeShowroomAcc = adminAccounts.find(
     (a) => a.id === activeOwnerId || a.ownerId === activeOwnerId
   )
@@ -39,6 +46,15 @@ function FilterContent() {
     .filter((car) => {
       if ((car.ownerId || 'admin_owner_1') !== activeOwnerId) {
         return false
+      }
+      if (activeBranch) {
+        const isBranchMatch = car.branchId === activeBranch.id;
+        const isCityMatch = car.location.toLowerCase().includes(activeBranch.city.toLowerCase());
+        const isNameMatch = car.location.toLowerCase().includes(activeBranch.name.toLowerCase());
+        
+        if (!isBranchMatch && !isCityMatch && !isNameMatch) {
+          return false
+        }
       }
       if (search && !car.name.toLowerCase().includes(search.toLowerCase()) && !car.brand.toLowerCase().includes(search.toLowerCase()))
         return false

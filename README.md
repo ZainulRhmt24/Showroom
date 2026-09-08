@@ -1,23 +1,27 @@
 # DENKEN MOTORS - Premium Showroom
 
-Denken Motors adalah platform aplikasi web showroom mobil premium yang modern, dinamis, dan terintegrasi penuh. Aplikasi ini dibangun dengan memadukan antarmuka (UI) mewah khusus pengunjung dan Dashboard Admin canggih untuk mengelola operasional showroom secara *real-time*.
+Denken Motors adalah platform aplikasi web showroom mobil premium yang modern, dinamis, dan terintegrasi penuh. Aplikasi ini dibangun dengan sistem **Multi-Cabang**, memadukan antarmuka (UI) mewah khusus pengunjung dengan Dashboard Admin canggih untuk mengelola operasional setiap cabang secara independen dan *real-time*.
 
 ## 🚀 Fitur Utama
 
-### 1. Website Pengunjung (Front-End)
-- **Katalog Kendaraan Premium**: Tampilan daftar mobil dengan filter canggih (Brand, Tipe, Transmisi) serta label khusus (*SOLD OUT*, *NEW*, *BEST SELLER*).
+### 1. Sistem Multi-Cabang (Multi-Branch System)
+- **URL Dinamis per Cabang**: Menggunakan arsitektur `/[cabang]` (misal: `/jakarta`, `/bogor`). Pengunjung secara otomatis diarahkan ke cabang terdekat atau default, dan seluruh inventaris mobil disesuaikan dengan stok cabang tersebut.
+- **Pemisahan Data**: Pemilik cabang (Owner) hanya mengelola stok mobil, leads, dan ulasan yang masuk khusus di cabangnya, mencegah data tercampur antarcabang.
+
+### 2. Website Pengunjung (Front-End)
+- **Katalog Kendaraan Premium**: Tampilan daftar mobil per cabang dengan filter canggih serta label khusus (*SOLD OUT*, *NEW*, *BEST SELLER*).
 - **Detail Mobil Komprehensif**: Halaman spesifik untuk setiap unit yang menampilkan galeri foto, spesifikasi mesin, harga Cash, dan estimasi cicilan (DP & Tenor).
 - **Pengajuan Interaktif**:
-  - **Simulasi & Pengajuan Kredit**: Pengguna dapat menyimulasikan cicilan dan langsung mengirim form prospek ke admin.
-  - **Trade-In (Tukar Tambah)**: Form khusus untuk pelanggan yang ingin menukar mobil lamanya dengan unit di showroom.
-  - **Beli Cash**: Form prioritas untuk pembelian tunai.
-- **Responsif & Animasi Mulus**: Dibangun dengan Tailwind CSS dan desain adaptif, menjamin pengalaman *browsing* yang setara kualitas aplikasi *native*.
+  - **Simulasi & Pengajuan Kredit**: Pengguna dapat menyimulasikan cicilan dan langsung mengirim form prospek ke admin cabang terkait.
+  - **Trade-In (Tukar Tambah)** & **Beli Cash**: Form khusus untuk prioritas pelanggan.
+- **Ulasan & Rating Dinamis**: Pengunjung dapat memberikan ulasan, yang akan dikaitkan khusus ke cabang tempat mereka bertransaksi.
+- **Responsif & Animasi Mulus**: Dibangun dengan Tailwind CSS dan desain adaptif, menjamin pengalaman *browsing* premium.
 
-### 2. Dashboard Admin & CMS (`/admin`)
-- **Manajemen Inventaris (Cars)**: Tambah, edit, dan hapus unit mobil. Perubahan akan langsung tercermin secara instan di website utama.
-- **Manajemen Prospek (Leads)**: Memonitor prospek pelanggan yang masuk dari website (Kredit, Cash, Trade-In). 
+### 3. Dashboard Admin & Manajemen Cabang (`/admin`)
+- **Portal Manajemen Cabang**: Admin Pusat dapat membuat akun *Owner* baru dan mendaftarkan cabang baru lengkap dengan jadwal operasional dan integrasi peta (Gmaps).
+- **Manajemen Inventaris & Prospek**: Pemilik cabang dapat melakukan *Tambah, Edit, Hapus* unit mobil, serta mengelola prospek pelanggan (Leads). Perubahan langsung tersinkronisasi ke *Front-End* cabang bersangkutan.
 - **Otomatisasi Sistem**: Jika admin mengubah status prospek menjadi **"Disetujui"**, sistem secara otomatis akan mengunci mobil terkait menjadi **SOLD OUT**.
-- **Live Edit Mode (CMS)**: Kemampuan luar biasa bagi admin untuk mengedit teks (Header, Slogan, Testimoni, Info Kontak) langsung dari tampilan visual website (*Pratinjau*) tanpa harus menyentuh kode pemrograman.
+- **Live Edit Mode (CMS)**: Kemampuan untuk mengedit tampilan visual (Header, Testimoni, Info Kontak cabang) langsung dari tampilan visual website (*Pratinjau*).
 
 ---
 
@@ -27,7 +31,7 @@ Denken Motors adalah platform aplikasi web showroom mobil premium yang modern, d
 - **Bahasa**: [TypeScript](https://www.typescriptlang.org/)
 - **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
 - **ORM**: [Prisma](https://www.prisma.io/)
-- **State Management**: [Zustand](https://github.com/pmndrs/zustand) (Dengan dukungan Optimistic Updates & Local Storage Persist)
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand) (Dengan dukungan Optimistic Updates)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Ikon**: [Lucide React](https://lucide.dev/)
 
@@ -39,7 +43,7 @@ Denken Motors adalah platform aplikasi web showroom mobil premium yang modern, d
 Pastikan komputer Anda telah terinstal:
 - Node.js (v18 atau lebih baru)
 - Git
-- Akun Supabase (untuk database)
+- Akun Supabase (untuk database PostgreSQL)
 
 ### Langkah Instalasi
 
@@ -63,7 +67,7 @@ Pastikan komputer Anda telah terinstal:
    ```
 
 4. **Sinkronisasi Database (Prisma)**
-   Jalankan perintah ini untuk membangun tabel-tabel di Supabase sesuai dengan skema Anda dan mengisinya dengan data mobil bawaan (*seeding*):
+   Jalankan perintah ini untuk membangun tabel-tabel di Supabase sesuai dengan skema Anda dan mengisinya dengan data *mock* (termasuk pembuatan cabang default):
    ```bash
    npx prisma generate
    npx prisma db push
@@ -74,22 +78,25 @@ Pastikan komputer Anda telah terinstal:
    ```bash
    npm run dev
    ```
-   Aplikasi Anda kini bisa diakses melalui browser di `http://localhost:3000`.
+   Aplikasi Anda kini bisa diakses melalui browser di `http://localhost:3000`. Halaman utama (root) otomatis akan mengarahkan Anda ke URL cabang default (contoh: `http://localhost:3000/jakarta`).
 
 ---
 
 ## 📁 Struktur Direktori Penting
 
-- `app/(user)/`: Halaman-halaman front-end untuk pengunjung (Home, Katalog, Kontak, dll).
-- `app/admin/`: Area eksklusif Dashboard Admin.
-- `app/actions/`: *Server Actions* Next.js (Fungsi back-end) untuk berinteraksi langsung dengan Prisma/Database dengan sangat cepat.
+- `app/(user)/[cabang]/`: Struktur rute dinamis (Dynamic Routing) untuk menangani halaman pengunjung per cabang (Home, Detail Mobil, dll).
+- `app/admin/`: Area eksklusif Dashboard Admin lengkap dengan integrasi pendaftaran *Owner* baru.
+- `app/actions/`: Kumpulan *Server Actions* Next.js (Fungsi back-end) untuk interaksi langsung dengan Prisma. Mengelola *Cars, Leads, Testimonials*, dan *Branches*.
 - `components/`: Komponen React modular yang dapat digunakan ulang (Navbar, CarCard, Footer, dll).
-- `store/useStore.ts`: Jantung pengelolaan memori (Zustand) yang menghubungkan aksi dari Admin secara langsung (*real-time*) ke UI dan Database.
-- `prisma/schema.prisma`: Desain tabel/skema Database Anda.
+- `store/useStore.ts`: Jantung pengelolaan memori (Zustand) yang memfasilitasi *optimistic UI updates* agar website terasa *blazing fast*.
+- `prisma/schema.prisma`: Skema Relasional Database (memetakan relasi `User`, `Branch`, `Car`, `Lead`, `Testimonial`).
 
 ---
 
-## 🔑 Autentikasi Admin
-Aplikasi ini sudah diprogram dengan sistem keamanan. Untuk masuk ke dashboard Admin, navigasikan browser Anda ke `http://localhost:3000/admin` dan gunakan detail bawaan atau daftarkan admin baru.
+## 🔑 Autentikasi & Pemilik Cabang (Owner)
+Sistem memiliki mekanisme keamanan berbasis email untuk akses Admin.
+1. Kunjungi `http://localhost:3000/admin`.
+2. Daftar pertama kali (atau gunakan akun bawaan `zainul@denkenmotors.id`).
+3. Akun ini akan berfungsi sebagai "Admin Induk" yang bisa membuat *Cabang Baru* serta membagikan akun turunan kepada kepala-kepala cabang lain. Kepala cabang hanya memiliki wewenang untuk mengatur mobil dan prospek di cabang miliknya sendiri.
 
-*(Dikembangkan dan diarsiteki khusus untuk pengalaman Showroom Mobil Premium Terbaik)*
+*(Dikembangkan khusus untuk pengalaman Showroom Mobil Premium Tersentralisasi namun Independen)*

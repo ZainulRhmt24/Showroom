@@ -1,16 +1,25 @@
-import { Suspense } from 'react'
-import { getCars } from '@/app/actions/carActions'
-import HomeClient from './HomeClient'
+"use client"
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useStore } from '@/store/useStore'
 
-export const revalidate = 0 // always fetch dynamically, or we can use 60 for ISR
+export default function RootRedirect() {
+  const router = useRouter()
+  const branches = useStore((state) => state.branches)
 
-export default async function Home() {
-  // Ambil data mobil dari Supabase (Prisma)
-  const dbCars = await getCars()
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      const defaultBranch = branches[0]
+      const cityPath = defaultBranch.slug || defaultBranch.city.toLowerCase().replace(/\s+/g, '-')
+      router.replace(`/${cityPath}`)
+    } else {
+      router.replace('/jakarta')
+    }
+  }, [branches, router])
 
   return (
-    <Suspense fallback={<div className="pt-32 pb-20 min-h-screen text-center"><p>Memuat halaman utama...</p></div>}>
-      <HomeClient initialCars={dbCars} />
-    </Suspense>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="animate-pulse text-muted-foreground font-bold">Mengarahkan ke cabang terdekat...</p>
+    </div>
   )
 }

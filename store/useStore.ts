@@ -17,12 +17,26 @@ export interface Lead {
   ownerId?: string
 }
 
+export interface Branch {
+  id: string
+  slug: string
+  name: string
+  city: string
+  address: string
+  mapUrl: string
+  ownerId: string
+  openDays?: string
+  openHours?: string
+  createdAt: string
+}
+
 export interface Testimonial {
   id: string
   quote: string
   name: string
   car: string
   rating: number
+  branchId?: string
 }
 
 export interface AdminAccount {
@@ -31,6 +45,7 @@ export interface AdminAccount {
   email: string
   password: string
   role: 'Owner' | 'Manager' | 'Sales Admin'
+  phone?: string
   ownerId?: string
   createdAt: string
 }
@@ -85,6 +100,8 @@ interface StoreState {
   monthlySalesRecords: MonthlySalesRecord[]
   dynamicContent: Record<string, string>
   isEditMode: boolean
+  branches: Branch[]
+  activeClientBranchId: string | null
 
   addToWishlist: (id: string) => void
   removeFromWishlist: (id: string) => void
@@ -105,6 +122,7 @@ interface StoreState {
   deleteLead: (id: string) => void
 
   addTestimonial: (testimonial: Omit<Testimonial, 'id'>) => void
+  deleteTestimonial: (id: string) => void
 
   updateSiteConfig: (config: Partial<SiteConfig>) => void
 
@@ -116,13 +134,20 @@ interface StoreState {
     recipientName?: string
   ) => { success: boolean; code: string; message: string }
   registerAdmin: (
-    accountData: Omit<AdminAccount, 'id' | 'createdAt'>,
-    masterKey: string
+    accountData: Omit<AdminAccount, 'id' | 'createdAt' | 'ownerId'>,
+    masterKey: string,
+    branchData?: { name: string; city: string; address: string }
   ) => { success: boolean; message: string }
   adminLogout: () => void
   updateMonthlySalesRecord: (year: number, month: string, units: number, revenue: number) => void
   updateDynamicContent: (key: string, value: string) => void
   toggleEditMode: () => void
+  setEditMode: (mode: boolean) => void
+
+  addBranch: (branchData: Omit<Branch, 'id' | 'createdAt' | 'ownerId'>) => void
+  updateBranch: (id: string, data: Partial<Branch>) => void
+  deleteBranch: (id: string) => void
+  setClientBranch: (id: string | null) => void
 }
 
 export const getActiveShowroom = (searchParamShowroom?: string | null): string => {
@@ -202,40 +227,8 @@ export const useStore = create<StoreState>()(
       compare: [],
       recentlyViewed: [],
       cars: CARS.map((c) => ({ ...c, ownerId: c.ownerId || 'admin_owner_1' })),
-      leads: [
-        {
-          id: 'lead-1',
-          type: 'Kredit',
-          name: 'Budi Santoso',
-          whatsapp: '081298765432',
-          email: 'budi@example.com',
-          city: 'Jakarta Selatan',
-          carId: 'c1',
-          carName: 'Toyota Fortuner GR Sport',
-          details: { dp: '100000000', tenor: '5' },
-          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          status: 'Baru',
-          ownerId: 'admin_owner_1',
-        },
-        {
-          id: 'lead-2',
-          type: 'Trade-In',
-          name: 'Siti Rahma',
-          whatsapp: '081311223344',
-          email: 'siti@example.com',
-          city: 'Bandung',
-          carName: 'Honda Jazz 2018 (Mobil Lama)',
-          details: { year: 2018, mileage: 45000, targetCar: 'Honda CR-V Turbo' },
-          createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-          status: 'Diproses',
-          ownerId: 'admin_owner_1',
-        },
-      ],
-      testimonials: [
-        { id: 't1', quote: 'Proses pembelian sangat mudah. Tim DENKEN MOTORS sangat membantu dari awal sampai mobil tiba di rumah.', name: 'Andi Pratama', car: 'Toyota Fortuner GR Sport', rating: 5 },
-        { id: 't2', quote: 'Kondisi mobil sesuai deskripsi, harga transparan, dan pelayanannya benar-benar profesional.', name: 'Maya Sari', car: 'Honda CR-V Turbo', rating: 5 },
-        { id: 't3', quote: 'Simulasi kreditnya jelas dan proses approval cepat. Sangat recommended.', name: 'Rizky Mahendra', car: 'Hyundai Palisade', rating: 5 }
-      ],
+      leads: [],
+      testimonials: [],
       siteConfig: {
         heroTitle: "Premium Automotive Experience",
         heroSubtitle: "Temukan koleksi mobil premium impian Anda. Kualitas terjamin, proses transparan, dan layanan prioritas VVIP untuk setiap pelanggan.",
@@ -272,6 +265,19 @@ export const useStore = create<StoreState>()(
       monthlySalesRecords: [],
       dynamicContent: {},
       isEditMode: false,
+      branches: [
+        {
+          id: 'branch_jkt',
+          slug: 'jakarta',
+          name: 'DENKEN Jakarta (Pusat)',
+          city: 'Jakarta',
+          address: 'Jl. TB Simatupang No. 88, Jakarta Selatan',
+          mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.9224483329995!2d106.79724491537233!3d-6.273934995458514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f1a065a63901%3A0xc34857b2da63be3d!2sJl.%20TB%20Simatupang%20No.88!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid',
+          ownerId: 'admin_owner_1',
+          createdAt: new Date().toISOString()
+        }
+      ],
+      activeClientBranchId: null,
 
       addToWishlist: (id) =>
         set((state) => ({
@@ -340,7 +346,7 @@ export const useStore = create<StoreState>()(
 
           // Call server action asynchronously
           import('@/app/actions/carActions').then((m) => {
-            m.createCar(carData as any)
+            m.createCar(newCar as any)
           })
 
           return { cars: [newCar, ...state.cars] }
@@ -373,10 +379,28 @@ export const useStore = create<StoreState>()(
         }),
 
       syncFromDatabase: (dbCars, dbLeads) =>
-        set(() => ({
-          cars: dbCars,
-          leads: dbLeads,
-        })),
+        set((state) => {
+          const mergedCars = dbCars.length > 0 ? [...dbCars.map((c: any) => ({ ...c, ownerId: c.ownerId || 'admin_owner_1' }))] : [...state.cars];
+          if (dbCars.length > 0) {
+            const dbCarIds = new Set(dbCars.map((c: any) => c.id));
+            state.cars.forEach((c) => {
+              if (!dbCarIds.has(c.id)) mergedCars.push(c);
+            });
+          }
+
+          const mergedLeads = dbLeads.length > 0 ? [...dbLeads.map((l: any) => ({ ...l, ownerId: l.ownerId || 'admin_owner_1' }))] : [...state.leads];
+          if (dbLeads.length > 0) {
+            const dbLeadIds = new Set(dbLeads.map((l: any) => l.id));
+            state.leads.forEach((l) => {
+              if (!dbLeadIds.has(l.id)) mergedLeads.push(l);
+            });
+          }
+
+          return {
+            cars: mergedCars,
+            leads: mergedLeads,
+          }
+        }),
 
       addLead: async (leadData) => {
         const state = get()
@@ -404,8 +428,9 @@ export const useStore = create<StoreState>()(
         if (res.success && res.lead) {
           const newLead: Lead = {
             ...res.lead,
+            createdAt: new Date(res.lead.createdAt).toISOString(),
             type: res.lead.type === 'Trade_In' ? 'Trade-In' : res.lead.type,
-          } as Lead
+          } as unknown as Lead
 
           // Trigger native browser notification if enabled
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -463,7 +488,7 @@ export const useStore = create<StoreState>()(
           import('@/app/actions/leadActions').then((m) => {
             m.deleteLead(id)
           })
-          
+
           const targetLead = state.leads.find((l) => l.id === id)
           let updatedCars = state.cars
           if (targetLead && targetLead.status === 'Disetujui') {
@@ -478,7 +503,7 @@ export const useStore = create<StoreState>()(
             }
           }
 
-          return { 
+          return {
             leads: state.leads.filter((l) => l.id !== id),
             cars: updatedCars
           }
@@ -490,6 +515,11 @@ export const useStore = create<StoreState>()(
             ...state.testimonials,
             { ...data, id: `testimoni-${Date.now()}` }
           ]
+        })),
+
+      deleteTestimonial: (id) =>
+        set((state) => ({
+          testimonials: state.testimonials.filter((t) => t.id !== id)
         })),
 
       updateSiteConfig: (config) =>
@@ -568,7 +598,7 @@ export const useStore = create<StoreState>()(
         return false
       },
 
-      registerAdmin: (accountData, masterKey) => {
+      registerAdmin: (accountData, masterKey, branchData) => {
         const state = useStore.getState()
         const activeKey = state.activeRandomMasterKey
         const inputKey = masterKey.trim().toUpperCase()
@@ -608,17 +638,54 @@ export const useStore = create<StoreState>()(
           createdAt: new Date().toISOString(),
         }
 
-        const newOwnerCars: Car[] = []
+        let newBranch: Branch | undefined
+        if (accountData.role === 'Owner' && branchData) {
+          const baseSlug = branchData.city.toLowerCase().replace(/\s+/g, '-')
+          let uniqueSlug = baseSlug
+          let counter = 1
+          while (state.branches.some(b => b.slug === uniqueSlug)) {
+            uniqueSlug = `${baseSlug}-${counter}`
+            counter++
+          }
+
+          newBranch = {
+            id: `branch_${Date.now()}`,
+            slug: uniqueSlug,
+            name: branchData.name,
+            city: branchData.city,
+            address: branchData.address,
+            mapUrl: '',
+            ownerId: assignedOwnerId,
+            createdAt: new Date().toISOString()
+          }
+        }
+
+        let newOwnerCars: Car[] = []
+        if (accountData.role === 'Owner' && newBranch) {
+          // Make sure data is completely fresh for new admin accounts
+          newOwnerCars = []
+        }
+
+        import('@/app/actions/userActions').then((m) => {
+          m.createUser(newAccount)
+        }).catch(err => console.error("Failed to call createUser action", err))
+        
+        if (newBranch) {
+          import('@/app/actions/branchActions').then((m) => {
+            m.createBranch(newBranch as any)
+          }).catch(err => console.error("Failed to call createBranch action", err))
+        }
 
         saveAuthSession(true, newAccount)
-        set({
+        set((state) => ({
+          adminAccounts: [...state.adminAccounts, newAccount],
+          branches: newBranch ? [newBranch, ...state.branches] : state.branches,
           cars: [...newOwnerCars, ...state.cars],
-          adminAccounts: [newAccount, ...accounts],
           isAdminLoggedIn: true,
           currentAdminUser: newAccount,
           activeRandomMasterKey: null,
           lastEmailNotification: null,
-        })
+        }))
 
         return {
           success: true,
@@ -660,10 +727,35 @@ export const useStore = create<StoreState>()(
         })),
 
       toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
+      setEditMode: (mode) => set({ isEditMode: mode }),
+
+      addBranch: (branchData) =>
+        set((state) => {
+          const ownerId = state.currentAdminUser?.ownerId || state.currentAdminUser?.id || 'admin_owner_1'
+          const newBranch: Branch = {
+            ...branchData,
+            id: `branch_${Date.now()}`,
+            ownerId,
+            createdAt: new Date().toISOString(),
+          }
+          return { branches: [newBranch, ...state.branches] }
+        }),
+
+      updateBranch: (id, data) =>
+        set((state) => ({
+          branches: state.branches.map((b) => (b.id === id ? { ...b, ...data } : b)),
+        })),
+
+      deleteBranch: (id) =>
+        set((state) => ({
+          branches: state.branches.filter((b) => b.id !== id),
+        })),
+
+      setClientBranch: (id) => set({ activeClientBranchId: id }),
     }),
     {
       name: 'denken-motors-storage',
-      version: 35,
+      version: 37,
       partialize: (state) => ({
         wishlist: state.wishlist,
         compare: state.compare,
@@ -675,12 +767,52 @@ export const useStore = create<StoreState>()(
         adminAccounts: state.adminAccounts,
         monthlySalesRecords: state.monthlySalesRecords,
         dynamicContent: state.dynamicContent,
+        branches: state.branches,
+        activeClientBranchId: state.activeClientBranchId,
       }),
       migrate: (persistedState: any, version: number) => {
         let state = persistedState || {}
-        if (version < 35) {
-          // Force reset cars to default many cars for admin_owner_1
-          state.cars = CARS.map((c) => ({ ...c, ownerId: 'admin_owner_1' }))
+        
+        if (version < 37) {
+          // Remove accidentally created branches and their cars (Bogor, Bandung, etc.)
+          if (Array.isArray(state.branches)) {
+            state.branches = state.branches.filter((b: any) => {
+              const city = b.city?.toLowerCase() || ''
+              return !city.includes('bogor') && !city.includes('bandung')
+            })
+          }
+          if (Array.isArray(state.cars)) {
+            state.cars = state.cars.filter((c: any) => {
+              const loc = c.location?.toLowerCase() || ''
+              return !loc.includes('bogor') && !loc.includes('bandung')
+            })
+          }
+        }
+
+        if (version < 36) {
+          // Ensure default branch exists
+          if (!state.branches) {
+            state.branches = []
+          }
+          if (!state.branches.find((b: any) => b.id === 'branch_jkt')) {
+            state.branches.unshift({
+              id: 'branch_jkt',
+              name: 'DENKEN Jakarta (Pusat)',
+              city: 'Jakarta',
+              address: 'Jl. TB Simatupang No. 88, Jakarta Selatan',
+              mapUrl: '',
+              ownerId: 'admin_owner_1',
+              createdAt: new Date().toISOString()
+            })
+          }
+
+          // Force reset cars to default many cars for admin_owner_1 and assign to Jakarta branch
+          state.cars = CARS.map((c) => ({
+            ...c,
+            ownerId: 'admin_owner_1',
+            branchId: 'branch_jkt',
+            location: 'Jakarta Selatan'
+          }))
 
           // Inject special admin account
           if (Array.isArray(state.adminAccounts)) {

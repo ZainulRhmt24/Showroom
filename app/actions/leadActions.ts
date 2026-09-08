@@ -16,6 +16,30 @@ export async function createLead(data: {
   ownerId?: string
 }) {
   try {
+    const targetOwnerId = data.ownerId || 'admin_owner_1';
+    
+    // Ensure User exists to prevent Foreign Key constraint error
+    const userExists = await prisma.user.findUnique({ where: { id: targetOwnerId } });
+    if (!userExists) {
+      await prisma.user.create({
+        data: {
+          id: targetOwnerId,
+          name: 'Showroom Admin',
+          email: `${targetOwnerId}@denkenmotors.id`,
+          role: 'OWNER'
+        }
+      });
+    }
+
+    // Ensure Car exists to prevent Foreign Key constraint error
+    let validCarId = data.carId;
+    if (validCarId) {
+      const carExists = await prisma.car.findUnique({ where: { id: validCarId } });
+      if (!carExists) {
+        validCarId = undefined; // Drop relational link, but keep carName
+      }
+    }
+
     const lead = await prisma.lead.create({
       data: {
         type: data.type,
@@ -23,10 +47,10 @@ export async function createLead(data: {
         whatsapp: data.whatsapp,
         email: data.email,
         city: data.city,
-        carId: data.carId,
+        carId: validCarId,
         carName: data.carName,
         details: data.details || {},
-        ownerId: data.ownerId || 'admin_owner_1',
+        ownerId: targetOwnerId,
       },
     })
     

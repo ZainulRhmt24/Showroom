@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore'
 import { Edit2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { upsertContent } from '@/app/actions/contentActions'
+import { useParams } from 'next/navigation'
 
 interface EditableTextProps {
   contentKey: string
@@ -25,8 +26,16 @@ export function EditableText({
   const isEditMode = useStore((state) => state.isEditMode)
   const dynamicContent = useStore((state) => state.dynamicContent)
   const updateDynamicContent = useStore((state) => state.updateDynamicContent)
+  const branches = useStore((state) => state.branches)
+  
+  const params = useParams()
+  const currentCabang = (params?.cabang as string) || 'jakarta'
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  const activeOwnerId = activeBranch ? activeBranch.ownerId : 'admin_owner_1'
+  
+  const namespacedKey = `${activeOwnerId}_${contentKey}`
 
-  const savedText = dynamicContent[contentKey]
+  const savedText = dynamicContent[namespacedKey]
   const displayText = savedText !== undefined ? savedText : defaultText
 
   const [isEditing, setIsEditing] = useState(false)
@@ -52,8 +61,8 @@ export function EditableText({
   }, [isEditing])
 
   const handleSave = () => {
-    updateDynamicContent(contentKey, value)
-    upsertContent(contentKey, value).catch(console.error)
+    updateDynamicContent(namespacedKey, value)
+    upsertContent(namespacedKey, value).catch(console.error)
     setIsEditing(false)
     setIsHovered(false)
   }

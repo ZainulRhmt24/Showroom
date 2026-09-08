@@ -4,14 +4,22 @@ import Link from 'next/link'
 import { Globe, Mail, MapPin, Phone } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { EditableText } from '@/components/EditableText'
 
 export function Footer() {
   const siteConfig = useStore((state) => state.siteConfig)
-  const dynamicContent = useStore((state) => state.dynamicContent)
+  const adminAccounts = useStore((state) => state.adminAccounts)
+  const branches = useStore((state) => state.branches)
   const [mounted, setMounted] = useState(false)
   
-  const currentPhone = dynamicContent['footer_phone'] !== undefined ? dynamicContent['footer_phone'] : siteConfig.contactPhone
+  const params = useParams()
+  const currentCabang = (params?.cabang as string) || 'jakarta'
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  const activeOwnerId = activeBranch ? activeBranch.ownerId : 'admin_owner_1'
+  
+  const activeAdmin = adminAccounts.find(a => (a.ownerId || a.id) === activeOwnerId)
+  const currentPhone = activeAdmin?.phone || siteConfig.contactPhone
 
   useEffect(() => setMounted(true), [])
 
@@ -61,17 +69,17 @@ export function Footer() {
         </div>
         
         <div>
-          <h3 className="mb-6 text-sm font-bold uppercase tracking-wider text-foreground"><EditableText contentKey="footer_showroom_title" defaultText="Showroom Jakarta" /></h3>
+          <h3 className="mb-6 text-sm font-bold uppercase tracking-wider text-foreground">Showroom {activeBranch?.city || 'Pusat'}</h3>
           <p className="text-sm font-medium leading-relaxed text-muted-foreground whitespace-pre-wrap">
-            <EditableText contentKey="footer_address" defaultText={siteConfig.contactAddress} multiline /><br /><br />
-            <span className="text-foreground"><EditableText contentKey="footer_hours_days" defaultText="Senin - Minggu:" as="span" /></span> <EditableText contentKey="footer_hours_time" defaultText="09:00 - 20:00" as="span" /><br />
+            {activeBranch?.address || siteConfig.contactAddress}<br /><br />
+            <span className="text-foreground">{activeBranch?.openDays || "Senin - Minggu"}:</span> {activeBranch?.openHours || "09:00 - 20:00"}<br />
             <a
               href={`https://wa.me/${currentPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(siteConfig.contactWaText)}`}
               target="_blank"
               rel="noreferrer"
               className="text-foreground mt-2 block font-display text-xl text-primary hover:underline"
             >
-              <EditableText contentKey="footer_phone" defaultText={siteConfig.contactPhone} as="span" />
+              {currentPhone}
             </a>
           </p>
         </div>

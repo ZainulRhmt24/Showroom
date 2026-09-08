@@ -16,6 +16,7 @@ import {
   ChevronUp,
   MessageSquare
 } from 'lucide-react'
+import { useParams } from 'next/navigation'
 import { useStore, getActiveShowroom } from '@/store/useStore'
 
 const formatIDR = (n: number) => `Rp ${Math.round(n).toLocaleString('id-ID')}`
@@ -33,7 +34,10 @@ const parseDots = (s: string) => {
 
 function SimulationContent() {
   const searchParams = useSearchParams()
+  const params = useParams()
   const cars = useStore((state) => state.cars)
+  const branches = useStore((state) => state.branches)
+  const currentCabang = (params.cabang as string) || 'jakarta'
 
   const queryCarId = searchParams.get('carId')
   const showroomParam = searchParams.get('showroom')
@@ -41,8 +45,19 @@ function SimulationContent() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  const activeOwnerId = getActiveShowroom(showroomParam)
-  const displayCars = cars.filter((car) => (car.ownerId || 'admin_owner_1') === activeOwnerId)
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  
+  const activeOwnerId = showroomParam || (activeBranch ? activeBranch.ownerId : 'admin_owner_1')
+  let displayCars = cars.filter((car) => (car.ownerId || 'admin_owner_1') === activeOwnerId)
+  
+  if (activeBranch) {
+    displayCars = displayCars.filter(car => {
+      const isBranchMatch = car.branchId === activeBranch.id;
+      const isCityMatch = car.location.toLowerCase().includes(activeBranch.city.toLowerCase());
+      const isNameMatch = car.location.toLowerCase().includes(activeBranch.name.toLowerCase());
+      return isBranchMatch || isCityMatch || isNameMatch;
+    })
+  }
 
   // Selected Car state
   const [selectedCarId, setSelectedCarId] = useState<string>('')
@@ -209,7 +224,12 @@ function SimulationContent() {
                   className="h-20 w-32 object-cover object-center rounded-xl border border-border/50 shrink-0"
                 />
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{selectedCar.brand} • {selectedCar.year}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                    {selectedCar.brand} • {selectedCar.year}
+                    {selectedCar.isSoldOut && (
+                      <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[8px] font-black text-white">SOLD OUT</span>
+                    )}
+                  </span>
                   <h3 className="font-display text-lg font-bold">{selectedCar.name}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">{selectedCar.transmission} • {selectedCar.fuel} • {selectedCar.engine}</p>
                 </div>
@@ -430,23 +450,32 @@ function SimulationContent() {
 
                 {/* CTAs */}
                 <div className="space-y-3">
-                  <Link
-                    href={`/kredit?carId=${selectedCarId}&price=${price}&dp=${dpAmount}&tenor=${tenor}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-4 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.02] shadow-lg shadow-primary/25"
-                  >
-                    Ajukan Kredit Sekarang <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  {selectedCar?.isSoldOut ? (
+                    <div className="rounded-2xl border border-red-500/30 bg-red-500/10 py-4 text-center">
+                      <p className="font-display text-sm font-black text-red-500">UNIT TERJUAL (SOLD OUT)</p>
+                      <p className="text-[10px] text-white/50 mt-1">Silakan pilih unit lain untuk pengajuan kredit.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/${currentCabang}/kredit?carId=${selectedCarId}&price=${price}&dp=${dpAmount}&tenor=${tenor}${showroomParam ? `&showroom=${showroomParam}` : ''}`}
+                        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-4 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 hover:scale-[1.02] shadow-lg shadow-primary/25"
+                      >
+                        Ajukan Kredit Sekarang <ArrowRight className="h-4 w-4" />
+                      </Link>
 
-                  <a
-                    href={`https://wa.me/6287709165697?text=Halo%20DENKEN%20MOTORS,%20saya%20inisiatif%20konsultasi%20kredit%20mobil%20${encodeURIComponent(
-                      selectedCar?.name || 'Mobil'
-                    )}%20dengan%20Harga:%20${formatIDR(price)},%20DP:%20${formatIDR(dpAmount)},%20Tenor:%20${tenor}%20Tahun.`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 py-3.5 text-xs font-bold text-white transition-all hover:bg-white/15"
-                  >
-                    <MessageSquare className="h-4 w-4 text-emerald-400" /> Konsultasi Sales via WhatsApp
-                  </a>
+                      <a
+                        href={`https://wa.me/6287709165697?text=Halo%20DENKEN%20MOTORS,%20saya%20inisiatif%20konsultasi%20kredit%20mobil%20${encodeURIComponent(
+                          selectedCar?.name || 'Mobil'
+                        )}%20dengan%20Harga:%20${formatIDR(price)},%20DP:%20${formatIDR(dpAmount)},%20Tenor:%20${tenor}%20Tahun.`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 py-3.5 text-xs font-bold text-white transition-all hover:bg-white/15"
+                      >
+                        <MessageSquare className="h-4 w-4 text-emerald-400" /> Konsultasi Sales via WhatsApp
+                      </a>
+                    </>
+                  )}
                 </div>
 
                 <p className="mt-4 text-[10px] leading-relaxed text-white/40 text-center">

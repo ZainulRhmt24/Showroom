@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { ArrowRight, Calculator, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Car } from '@/data/cars'
@@ -10,6 +11,8 @@ import { motion } from 'framer-motion'
 const formatIDR = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
 
 export function CarCard({ car, index = 0 }: { car: Car; index?: number }) {
+  const params = useParams()
+  const currentCabang = (params?.cabang as string) || 'jakarta'
   const gallery = car.gallery && car.gallery.length > 0 ? car.gallery : [car.image]
   const [activeImgIdx, setActiveImgIdx] = useState(0)
 
@@ -29,9 +32,10 @@ export function CarCard({ car, index = 0 }: { car: Car; index?: number }) {
     <motion.article 
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
+      whileTap={{ scale: 0.98 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-primary/30 flex flex-col h-full"
+      className="group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-primary/30 flex flex-col h-full w-full"
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
         <img
@@ -88,21 +92,23 @@ export function CarCard({ car, index = 0 }: { car: Car; index?: number }) {
           </div>
         )}
         
-        <div className="absolute right-4 top-4 flex flex-col gap-2 z-20">
-          <Link
-            href={`/simulasi-kredit?carId=${car.id}`}
-            title="Hitung Simulasi Kredit"
-            className="rounded-full bg-background/80 p-2.5 backdrop-blur-md transition-all hover:bg-background hover:scale-110 shadow-lg text-foreground hover:text-primary"
-          >
-            <Calculator className="h-4 w-4" />
-          </Link>
-        </div>
+        {!car.isSoldOut && car.badge !== 'SOLD OUT' && (
+          <div className="absolute right-4 top-4 flex flex-col gap-2 z-20">
+            <Link
+              href={`/${currentCabang}/simulasi-kredit?carId=${car.id}`}
+              title="Hitung Simulasi Kredit"
+              className="rounded-full bg-background/80 p-2.5 backdrop-blur-md transition-all hover:bg-background hover:scale-110 shadow-lg text-foreground hover:text-primary"
+            >
+              <Calculator className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
       </div>
       
       <div className="flex flex-col flex-1 p-6 space-y-4">
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-primary/80">{car.year} • {car.transmission} • {car.fuel}</p>
-          <Link href={`/mobil/${car.slug}`}>
+          <Link href={`/${currentCabang}/mobil/${car.slug}`}>
             <h3 className="font-display text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">{car.name}</h3>
           </Link>
         </div>
@@ -114,7 +120,7 @@ export function CarCard({ car, index = 0 }: { car: Car; index?: number }) {
             <p className="text-xs font-medium text-muted-foreground mb-1">Harga Cash</p>
             <p className="font-display text-lg font-extrabold">{formatIDR(car.price)}</p>
           </div>
-          <Link href={`/mobil/${car.slug}`} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+          <Link href={`/${currentCabang}/mobil/${car.slug}`} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary group-hover:text-primary-foreground">
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>

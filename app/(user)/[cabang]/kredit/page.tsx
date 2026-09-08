@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, ChevronRight, FileText } from 'lucide-react'
+import { useParams } from 'next/navigation'
 import { useStore } from '@/store/useStore'
 
 const formatDots = (n?: number | string | null) => {
@@ -19,8 +20,26 @@ const parseDots = (s: string) => {
 
 function CreditFormContent() {
   const searchParams = useSearchParams()
-  const cars = useStore((state) => state.cars)
+  const params = useParams()
+  const allCars = useStore((state) => state.cars)
+  const branches = useStore((state) => state.branches)
   const addLead = useStore((state) => state.addLead)
+
+  const currentCabang = (params.cabang as string) || 'jakarta'
+  const activeBranch = branches.find(b => (b.slug || b.city.toLowerCase().replace(/\s+/g, '-')) === currentCabang) || branches[0]
+  
+  const showroomParam = searchParams.get('showroom')
+  const activeOwnerId = showroomParam || (activeBranch ? activeBranch.ownerId : 'admin_owner_1')
+  
+  let cars = allCars.filter((car) => (car.ownerId || 'admin_owner_1') === activeOwnerId)
+  if (activeBranch) {
+    cars = cars.filter(car => {
+      const isBranchMatch = car.branchId === activeBranch.id;
+      const isCityMatch = car.location.toLowerCase().includes(activeBranch.city.toLowerCase());
+      const isNameMatch = car.location.toLowerCase().includes(activeBranch.name.toLowerCase());
+      return isBranchMatch || isCityMatch || isNameMatch;
+    })
+  }
 
   const [step, setStep] = useState(1)
   const [isSuccess, setIsSuccess] = useState(false)
