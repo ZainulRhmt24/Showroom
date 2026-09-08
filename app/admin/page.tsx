@@ -2533,6 +2533,10 @@ export default function AdminDashboardPage() {
             </div>
             <span className="text-[10px] font-bold">Prospek</span>
           </button>
+          <button onClick={() => setActiveTab('branches')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all ${activeTab === 'branches' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Store className={`h-5 w-5 ${activeTab === 'branches' ? 'fill-primary/20' : ''}`} />
+            <span className="text-[10px] font-bold">Cabang</span>
+          </button>
           <button onClick={() => setActiveTab('ratings')} className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all relative ${activeTab === 'ratings' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <Star className={`h-5 w-5 ${activeTab === 'ratings' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold">Ulasan</span>

@@ -150,7 +150,7 @@ function HomeContent() {
             <p className="mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.28em] text-primary">
               <span className="h-px w-12 bg-primary" /> <EditableText contentKey="home_hero_kicker" defaultText="Premium automotive experience" />
             </p>
-            <h1 className="max-w-4xl font-display text-5xl font-extrabold leading-[1.1] tracking-tight sm:text-7xl drop-shadow-lg text-white">
+            <h1 className="max-w-4xl font-display text-4xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight drop-shadow-lg text-white">
               {mounted ? <EditableText contentKey="home_hero_title" defaultText={siteConfig.heroTitle} /> : "Premium Automotive Experience"}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80 font-medium">
@@ -324,7 +324,7 @@ function HomeContent() {
         <div className="mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary"><EditableText contentKey="home_col_kicker" defaultText="Koleksi pilihan" /></p>
-            <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl"><EditableText contentKey="home_col_title" defaultText="Mobil Pilihan Terbaik" /></h2>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight"><EditableText contentKey="home_col_title" defaultText="Mobil Pilihan Terbaik" /></h2>
             <p className="mt-4 max-w-lg text-lg text-muted-foreground"><EditableText contentKey="home_col_subtitle" defaultText="Temukan kendaraan terbaik yang sesuai dengan kebutuhan dan gaya hidup Anda." multiline /></p>
           </div>
           <Link href={showroomParam ? `/mobil?showroom=${showroomParam}` : '/mobil'} className="group inline-flex h-12 items-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-bold transition-all hover:bg-muted">
@@ -369,7 +369,7 @@ function HomeContent() {
       <section id="tentang" className="mx-auto max-w-7xl px-5 py-32 lg:px-8">
         <div className="text-center mb-16">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary"><EditableText contentKey="home_why_kicker" defaultText="The DENKEN standard" /></p>
-          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl"><EditableText contentKey="home_why_title" defaultText="Mengapa DENKEN MOTORS?" /></h2>
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight"><EditableText contentKey="home_why_title" defaultText="Mengapa DENKEN MOTORS?" /></h2>
         </div>
         
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -425,15 +425,15 @@ function HomeContent() {
 
       {/* 12. TESTIMONI */}
       <section id="testimoni" className="mx-auto max-w-7xl px-5 py-32 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8 md:mb-16">
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary"><EditableText contentKey="home_testi_kicker" defaultText="Real stories" /></p>
-            <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl"><EditableText contentKey="home_testi_title" defaultText="Apa Kata Pelanggan Kami" /></h2>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight"><EditableText contentKey="home_testi_title" defaultText="Apa Kata Pelanggan Kami" /></h2>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4">
             <button
               onClick={() => setShowReviewModal(true)}
-              className="hidden sm:flex items-center gap-2 rounded-full border-2 border-primary bg-primary/10 px-6 py-3 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
+              className="flex items-center gap-2 rounded-full border-2 border-primary bg-primary/10 px-6 py-3 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
               <MessageSquarePlus className="h-4 w-4" /> Tulis Ulasan Anda
             </button>
@@ -446,12 +446,6 @@ function HomeContent() {
               </button>
             </div>
           </div>
-          <button
-            onClick={() => setShowReviewModal(true)}
-            className="sm:hidden flex w-full items-center justify-center gap-2 rounded-full border-2 border-primary bg-primary/10 px-6 py-4 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
-          >
-            <MessageSquarePlus className="h-4 w-4" /> Tulis Ulasan Anda
-          </button>
         </div>
         
         {branchTestimonials.length > 0 ? (
@@ -488,6 +482,26 @@ function HomeContent() {
             <p className="text-muted-foreground font-medium">Belum ada ulasan untuk showroom ini.</p>
           </div>
         )}
+
+        {/* Mobile controls */}
+        <div className="mt-8 flex flex-col items-center gap-6 md:hidden">
+          {branchTestimonials.length > 0 && (
+            <div className="flex gap-4">
+              <button aria-label="Testimoni sebelumnya" onClick={() => { if (branchTestimonials.length) setSlide((slide + branchTestimonials.length - 1) % branchTestimonials.length) }} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary bg-card shadow-sm">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button aria-label="Testimoni berikutnya" onClick={() => { if (branchTestimonials.length) setSlide((slide + 1) % branchTestimonials.length) }} className="rounded-full border border-border p-4 transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary bg-card shadow-sm">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowReviewModal(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-full border-2 border-primary bg-primary/10 px-6 py-4 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground shadow-sm"
+          >
+            <MessageSquarePlus className="h-4 w-4" /> Tulis Ulasan Anda
+          </button>
+        </div>
 
         {/* Review Modal */}
         {showReviewModal && (
@@ -551,7 +565,7 @@ function HomeContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/80 to-transparent" />
         
         <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center px-5 lg:px-8">
-          <h2 className="font-display text-5xl font-black tracking-tight sm:text-7xl leading-[1.1]">
+          <h2 className="font-display text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1]">
             <EditableText contentKey="home_cta_title" defaultText="Siap Memiliki Mobil Impian Anda?" />
           </h2>
           <p className="mt-8 text-xl text-background/80 max-w-2xl font-medium leading-relaxed">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { GitCompareArrows, CheckCircle2, ChevronRight, Calculator, Car as CarIcon, Sparkles } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 
@@ -19,6 +20,9 @@ const parseDots = (s: string) => {
 }
 
 export default function TradeInPage() {
+  const params = useParams()
+  const currentCabang = (params?.cabang as string) || 'jakarta'
+
   const cars = useStore((state) => state.cars)
   const addLead = useStore((state) => state.addLead)
 
@@ -89,7 +93,7 @@ export default function TradeInPage() {
             {selectedTargetCar && <p><strong className="text-foreground">Mobil Impian:</strong> {selectedTargetCar.name}</p>}
           </div>
           <Link
-            href="/"
+            href={`/${currentCabang}`}
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-lg"
           >
             Kembali ke Beranda

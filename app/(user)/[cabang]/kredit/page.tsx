@@ -105,7 +105,7 @@ function CreditFormContent() {
             {formData.whatsapp}) Anda untuk memandu proses verifikasi dokumen.
           </p>
           <Link
-            href="/"
+            href={`/${currentCabang}`}
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-lg"
           >
             Kembali ke Beranda

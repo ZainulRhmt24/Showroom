@@ -96,7 +96,7 @@ Pastikan komputer Anda telah terinstal:
 ## 🔑 Autentikasi & Pemilik Cabang (Owner)
 Sistem memiliki mekanisme keamanan berbasis email untuk akses Admin.
 1. Kunjungi `http://localhost:3000/admin`.
-2. Daftar pertama kali (atau gunakan akun bawaan `zainul@denkenmotors.id`).
+2. Daftar pertama kali (atau gunakan akun bawaan `namaanda@denkenmotors.id`).
 3. Akun ini akan berfungsi sebagai "Admin Induk" yang bisa membuat *Cabang Baru* serta membagikan akun turunan kepada kepala-kepala cabang lain. Kepala cabang hanya memiliki wewenang untuk mengatur mobil dan prospek di cabang miliknya sendiri.
 
 *(Dikembangkan khusus untuk pengalaman Showroom Mobil Premium Tersentralisasi namun Independen)*
