@@ -42,7 +42,7 @@ export const CARS: Car[] = [
     color: 'Oxford White',
     type: 'SUV',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/fortuner.jpg',
     gallery: [
       '/cars/fortuner.jpg'
@@ -67,7 +67,7 @@ export const CARS: Car[] = [
     color: 'Pearl White Metallic',
     type: 'Luxury',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/crv.jpg',
     gallery: [
       '/cars/crv.jpg'
@@ -92,7 +92,7 @@ export const CARS: Car[] = [
     color: 'Platinum White Pearl',
     type: 'SUV',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/pajero.jpg',
     gallery: [
       '/cars/pajero.jpg'
@@ -167,7 +167,7 @@ export const CARS: Car[] = [
     color: 'Portimao Blue Metallic',
     type: 'Sedan',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/bmw330i.jpg',
     gallery: [
       '/cars/bmw330i.jpg'
@@ -192,7 +192,7 @@ export const CARS: Car[] = [
     color: 'Magno Selenite Gray',
     type: 'Luxury',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/c300.jpg',
     gallery: [
       '/cars/c300.jpg'
@@ -217,7 +217,7 @@ export const CARS: Car[] = [
     color: 'Santorini Black Metallic',
     type: 'Luxury',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/ioniq5.jpg',
     gallery: [
       '/cars/ioniq5.jpg'
@@ -242,7 +242,7 @@ export const CARS: Car[] = [
     color: 'Isle of Man Green / Brooklyn Grey',
     type: 'Luxury',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/cx5.jpg',
     gallery: [
       '/cars/cx5.jpg'
@@ -267,7 +267,7 @@ export const CARS: Car[] = [
     color: 'Jet Black Metallic',
     type: 'Luxury',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: '/cars/palisade.jpg',
     gallery: [
       '/cars/palisade.jpg'

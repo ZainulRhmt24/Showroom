@@ -344,7 +344,7 @@ export default function TradeInPage() {
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Contoh: Jakarta Selatan / Tangerang"
+                    placeholder="Contoh: Jakarta / Tangerang"
                     className="w-full rounded-xl border border-border bg-muted/50 p-4 text-sm outline-none focus:border-primary"
                   />
                 </div>

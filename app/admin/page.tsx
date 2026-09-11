@@ -146,7 +146,7 @@ const CAR_PRESETS = [
     color: 'Guards Red',
     type: 'Luxury' as const,
     condition: 'Bekas' as const,
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=1200&q=85',
     badge: 'LUXURY' as const,
     description: 'Iconic sports car dengan performa legendaris 450 HP. Kondisi mulus bebas cat ulang, Odometer asli 2.500 KM.',
@@ -167,7 +167,7 @@ const CAR_PRESETS = [
     color: 'Pangea Green',
     type: 'SUV' as const,
     condition: 'Bekas' as const,
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=85',
     badge: 'NEW' as const,
     description: 'SUV Off-road paling tangguh dan mewah. Dilengkapi Terrain Response 2 dan Meridian Sound System.',
@@ -299,9 +299,13 @@ export default function AdminDashboardPage() {
   const deleteBranch = useStore((state) => state.deleteBranch)
 
   const [mounted, setMounted] = useState(false)
+  
   useEffect(() => {
     setMounted(true)
-    
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return;
     // Sync data from database to clear old local storage and get fresh data
     const fetchFreshData = async () => {
       try {
@@ -322,7 +326,7 @@ export default function AdminDashboardPage() {
     if (isAdminLoggedIn) {
       fetchFreshData()
     }
-  }, [isAdminLoggedIn, activeOwnerId, syncFromDatabase])
+  }, [isAdminLoggedIn, activeOwnerId, syncFromDatabase, mounted])
 
   // Auth Screen Mode ('login' | 'register')
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
@@ -386,7 +390,7 @@ export default function AdminDashboardPage() {
     color: 'Hitam Metallic',
     type: 'SUV',
     condition: 'Bekas',
-    location: 'Jakarta Selatan',
+    location: 'Jakarta',
     image: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=1200&q=85',
     gallery: [],
     badge: 'NEW',
@@ -510,7 +514,7 @@ export default function AdminDashboardPage() {
       type: 'SUV',
       condition: 'Bekas',
       branchId: myBranches[0]?.id || '',
-      location: myBranches[0]?.city || 'Jakarta Selatan',
+      location: myBranches[0]?.city || 'Jakarta',
       image: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=1200&q=85',
       gallery: [],
       badge: 'NEW',
@@ -678,7 +682,16 @@ export default function AdminDashboardPage() {
 
   // LOGIN & REGISTRATION SCREEN FOR UNAUTHENTICATED USERS
   
-  if (!mounted) return null
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
+         <div className="animate-pulse flex flex-col items-center gap-4">
+           <div className="h-16 w-16 bg-primary/20 rounded-2xl border border-primary/20"></div>
+           <p className="text-muted-foreground text-sm font-medium">Memuat portal admin...</p>
+         </div>
+      </div>
+    )
+  }
 
   if (!isAdminLoggedIn) {
     return (

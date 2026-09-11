@@ -201,7 +201,7 @@ function CreditFormContent() {
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     className="w-full rounded-xl border border-border bg-muted/50 p-4 outline-none focus:border-primary"
-                    placeholder="Contoh: Jakarta Selatan"
+                    placeholder="Contoh: Jakarta"
                   />
                 </div>
               </div>

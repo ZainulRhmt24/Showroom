@@ -233,7 +233,7 @@ export const useStore = create<StoreState>()(
         heroTitle: "Premium Automotive Experience",
         heroSubtitle: "Temukan koleksi mobil premium impian Anda. Kualitas terjamin, proses transparan, dan layanan prioritas VVIP untuk setiap pelanggan.",
         contactPhone: "+62 877-0916-5697",
-        contactAddress: "Jl. TB Simatupang No. 88\nJakarta Selatan, 12430",
+        contactAddress: "Jl. TB Simatupang No. 88\nJakarta, 12430",
         contactEmail: "info@denkenmotors.com",
         contactWaText: "Halo DENKEN MOTORS, saya ingin menanyakan unit mobil showroom.",
         footerDescription: "Premium automotive experience untuk perjalanan terbaik Anda. Pilihan mobil terbaik dengan layanan yang tak tertandingi.",
@@ -271,7 +271,7 @@ export const useStore = create<StoreState>()(
           slug: 'jakarta',
           name: 'DENKEN Jakarta (Pusat)',
           city: 'Jakarta',
-          address: 'Jl. TB Simatupang No. 88, Jakarta Selatan',
+          address: 'Jl. TB Simatupang No. 88, Jakarta',
           mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.9224483329995!2d106.79724491537233!3d-6.273934995458514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f1a065a63901%3A0xc34857b2da63be3d!2sJl.%20TB%20Simatupang%20No.88!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid',
           ownerId: 'admin_owner_1',
           createdAt: new Date().toISOString()
@@ -669,7 +669,7 @@ export const useStore = create<StoreState>()(
         import('@/app/actions/userActions').then((m) => {
           m.createUser(newAccount)
         }).catch(err => console.error("Failed to call createUser action", err))
-        
+
         if (newBranch) {
           import('@/app/actions/branchActions').then((m) => {
             m.createBranch(newBranch as any)
@@ -755,7 +755,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'denken-motors-storage',
-      version: 37,
+      version: 39,
       partialize: (state) => ({
         wishlist: state.wishlist,
         compare: state.compare,
@@ -772,22 +772,7 @@ export const useStore = create<StoreState>()(
       }),
       migrate: (persistedState: any, version: number) => {
         let state = persistedState || {}
-        
-        if (version < 37) {
-          // Remove accidentally created branches and their cars (Bogor, Bandung, etc.)
-          if (Array.isArray(state.branches)) {
-            state.branches = state.branches.filter((b: any) => {
-              const city = b.city?.toLowerCase() || ''
-              return !city.includes('bogor') && !city.includes('bandung')
-            })
-          }
-          if (Array.isArray(state.cars)) {
-            state.cars = state.cars.filter((c: any) => {
-              const loc = c.location?.toLowerCase() || ''
-              return !loc.includes('bogor') && !loc.includes('bandung')
-            })
-          }
-        }
+
 
         if (version < 36) {
           // Ensure default branch exists
@@ -799,7 +784,7 @@ export const useStore = create<StoreState>()(
               id: 'branch_jkt',
               name: 'DENKEN Jakarta (Pusat)',
               city: 'Jakarta',
-              address: 'Jl. TB Simatupang No. 88, Jakarta Selatan',
+              address: 'Jl. TB Simatupang No. 88, Jakarta',
               mapUrl: '',
               ownerId: 'admin_owner_1',
               createdAt: new Date().toISOString()
@@ -811,7 +796,7 @@ export const useStore = create<StoreState>()(
             ...c,
             ownerId: 'admin_owner_1',
             branchId: 'branch_jkt',
-            location: 'Jakarta Selatan'
+            location: 'Jakarta'
           }))
 
           // Inject special admin account

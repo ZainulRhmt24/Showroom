@@ -37,7 +37,7 @@ export default function ContactPage() {
   const faqs = [
     {
       q: 'Bagaimana cara menjadwalkan Test Drive di showroom DENKEN MOTORS?',
-      a: 'Anda dapat menghubungi tim sales kami melalui form kontak ini, WhatsApp, atau langsung mengunjungi showroom kami di Jl. TB Simatupang No. 88, Jakarta Selatan. Unit siap diuji coba.',
+      a: 'Anda dapat menghubungi tim sales kami melalui form kontak ini, WhatsApp, atau langsung mengunjungi showroom kami di Jl. TB Simatupang No. 88, Jakarta. Unit siap diuji coba.',
     },
     {
       q: 'Apakah semua mobil di DENKEN MOTORS memiliki garansi?',
@@ -89,7 +89,7 @@ export default function ContactPage() {
                 <div>
                   <h4 className="font-bold text-foreground">Alamat Showroom</h4>
                   <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                    Jl. TB Simatupang No. 88, Cilandak, Jakarta Selatan, DKI Jakarta 12430
+                    Jl. TB Simatupang No. 88, Cilandak, Jakarta, DKI Jakarta 12430
                   </p>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function ContactPage() {
               <div className="relative z-10">
                 <MapPin className="h-10 w-10 text-primary mx-auto mb-2 animate-bounce" />
                 <p className="font-display font-bold text-white text-lg">Showroom TB Simatupang</p>
-                <p className="text-xs text-white/70 mt-1">Jakarta Selatan, DKI Jakarta</p>
+                <p className="text-xs text-white/70 mt-1">Jakarta, DKI Jakarta</p>
                 <a
                   href="https://maps.google.com"
                   target="_blank"
