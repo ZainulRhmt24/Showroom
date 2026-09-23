@@ -1,0 +1,605 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ENUMS
+enum Role {
+  USER
+  ADMIN
+  OWNER
+}
+
+enum MembershipRole {
+  OWNER
+  MANAGER
+  SALES
+}
+
+enum CarTransmission {
+  Automatic
+  Manual
+}
+
+enum CarFuel {
+  Bensin
+  Diesel
+  Listrik
+  Hybrid
+}
+
+enum CarCondition {
+  Baru
+  Bekas
+}
+
+enum CarType {
+  SUV
+  MPV
+  Sedan
+  Hatchback
+  Pickup
+  Luxury
+}
+
+enum LeadType {
+  Kredit
+  Cash
+  Trade_In @map("Trade-In")
+  Kontak
+}
+
+enum LeadStatus {
+  Baru
+  FollowUp
+  TestDrive
+  Negosiasi
+  Diproses
+  SPK
+  Disetujui
+  Selesai
+  Ditolak
+  Batal
+}
+
+enum LeadSource {
+  WEBSITE
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  REFERRAL
+  WALK_IN
+  MARKETPLACE
+  OTHER
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  WHATSAPP
+  FOLLOW_UP
+  TEST_DRIVE
+  STATUS_CHANGE
+}
+
+enum ConversationChannel {
+  WHATSAPP
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  RECEIVED
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// MODELS
+
+model Showroom {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  phone               String?
+  email               String?
+  address             String?
+  logo                String?
+  // Public website profile. These nullable fields keep existing tenants safe
+  // while allowing each showroom to own its public branding.
+  tagline             String?
+  description         String?
+  whatsapp            String?
+  city                String?
+  province            String?
+  heroTitle           String?
+  heroDescription     String?
+  primaryContactLabel String?
+  instagramUrl        String?
+  facebookUrl         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  memberships  UserMembership[]
+  branches     Branch[]
+  cars         Car[]
+  leads        Lead[]
+  customers    Customer[]
+  activities   LeadActivity[]
+  expenses     Expense[]
+  transactions Transaction[]
+  conversations Conversation[]
+  messages      Message[]
+  whatsappAccount WhatsAppAccount?
+  conversationTags ConversationTag[]
+  followUps        FollowUp[]
+  notifications    Notification[]
+}
+
+model UserMembership {
+  id         String         @id @default(cuid())
+  userId     String
+  showroomId String
+  role       MembershipRole @default(SALES)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showroom Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation("BranchMemberships", fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, showroomId])
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  password           String?
+  role               Role     @default(USER)
+  createdAt          DateTime @default(now())
+  mustChangePassword Boolean  @default(false)
+
+  // Legacy Relations (dipertahankan sementara untuk backward compatibility)
+  cars         Car[]         @relation("OwnerCars")
+  leads        Lead[]        @relation("OwnerLeads")
+  branches     Branch[]      @relation("OwnerBranches")
+  expenses     Expense[]     @relation("OwnerExpenses")
+  transactions Transaction[] @relation("OwnerTransactions")
+
+  memberships UserMembership[]
+  activities  LeadActivity[]   @relation("UserActivities")
+  followUps   FollowUp[]
+  notifications Notification[]
+}
+
+model Branch {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  city        String
+  address     String
+  mapUrl      String?
+  phone       String?
+  openDays    String? // e.g. "Senin - Sabtu"
+  openHours   String? // e.g. "09:00 - 18:00"
+  description String?
+  isActive    Boolean @default(true)
+
+  // Legacy relation
+  ownerId String
+  owner   User   @relation("OwnerBranches", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // New SaaS relation
+  showroomId String
+  showroom   Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  cars         Car[]            @relation("BranchCars")
+  leads        Lead[]           @relation("BranchLeads")
+  memberships  UserMembership[] @relation("BranchMemberships")
+  expenses     Expense[]        @relation("BranchExpenses")
+  transactions Transaction[]    @relation("BranchTransactions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Car {
+  id           String          @id @default(cuid())
+  slug         String          @unique
+  brand        String
+  name         String
+  year         Int
+  price        Float // Harga Cash OTR
+  priceCredit  Float? // Harga Paket Kredit
+  monthly      Float
+  dp           Float
+  transmission CarTransmission
+  fuel         CarFuel
+  engine       String
+  mileage      Int
+  color        String
+  type         CarType
+  condition    CarCondition
+  location     String
+  image        String
+  gallery      String[]
+  badge        String?
+  isSoldOut    Boolean         @default(false)
+  description  String
+  features     String[]
+
+  // Spesifikasi Vital Showroom Indonesia
+  taxDate            String?
+  plateNumber        String?
+  ownership          String?  @default("Tangan Pertama (Pribadi)")
+  serviceRecord      String?  @default("Bengkel Resmi (ATPM)")
+  documents          String[] @default([])
+  isFloodFree        Boolean  @default(true)
+  isAccidentFree     Boolean  @default(true)
+  isOdometerVerified Boolean  @default(true)
+  warrantyDays       Int      @default(365)
+
+  // Legacy relation
+  ownerId String
+  owner   User   @relation("OwnerCars", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // New SaaS relation
+  showroomId String
+  showroom   Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation("BranchCars", fields: [branchId], references: [id], onDelete: SetNull)
+
+  leads        Lead[]        @relation("CarLeads")
+  expenses     Expense[]     @relation("CarExpenses")
+  transactions Transaction[] @relation("CarTransactions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([showroomId, isSoldOut, createdAt])
+  @@index([showroomId, branchId])
+}
+
+model Customer {
+  id         String      @id @default(cuid())
+  showroomId String
+  name       String
+  phone      String
+  email      String?
+  address    String?
+  notes      String?
+  source     LeadSource?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  showroom   Showroom       @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  leads      Lead[]
+  activities LeadActivity[]
+  conversations Conversation[]
+  followUps  FollowUp[]
+
+  @@index([showroomId])
+  @@index([phone])
+  @@index([createdAt])
+}
+
+model Lead {
+  id       String   @id @default(cuid())
+  type     LeadType
+  name     String
+  whatsapp String
+  email    String?
+  city     String?
+
+  carId   String?
+  car     Car?    @relation("CarLeads", fields: [carId], references: [id], onDelete: SetNull)
+  carName String?
+
+  details Json?
+
+  status     LeadStatus  @default(Baru)
+  assignedTo String?
+  notes      String?
+  source     LeadSource?
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  nextFollowUpAt DateTime?
+  lastContactAt  DateTime?
+
+  activities LeadActivity[]
+
+  // Legacy relation
+  ownerId String?
+  owner   User?   @relation("OwnerLeads", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  // New SaaS relation
+  showroomId String
+  showroom   Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation("BranchLeads", fields: [branchId], references: [id], onDelete: SetNull)
+
+  transactions Transaction[] @relation("LeadTransactions")
+  conversations Conversation[]
+
+  // AI Scoring fields
+  aiScore       Int?
+  aiPriority    String?
+  aiExplanation Json?
+  aiScoredAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([showroomId, status])
+  @@index([showroomId, assignedTo])
+  @@index([showroomId, createdAt])
+}
+
+model LeadActivity {
+  id          String       @id @default(cuid())
+  showroomId  String
+  customerId  String?
+  leadId      String?
+  type        ActivityType
+  content     String
+  createdById String
+  createdAt   DateTime     @default(now())
+
+  showroom  Showroom  @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("UserActivities", fields: [createdById], references: [id])
+
+  @@index([showroomId])
+  @@index([leadId])
+  @@index([customerId])
+}
+
+// Kategori Pengeluaran Operasional Showroom
+enum ExpenseCategory {
+  Operasional
+  Servis
+  Poles
+  Dokumen
+  Marketing
+  Gaji
+  Lainnya
+}
+
+// Tipe Transaksi Penjualan
+enum TransactionType {
+  Penjualan
+  TradeIn
+}
+
+enum PaymentMethod {
+  Cash
+  Kredit
+  TradeIn
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  category    ExpenseCategory
+  description String
+  amount      Float
+  date        DateTime        @default(now())
+
+  carId String?
+  car   Car?    @relation("CarExpenses", fields: [carId], references: [id], onDelete: SetNull)
+
+  branchId String?
+  branch   Branch? @relation("BranchExpenses", fields: [branchId], references: [id], onDelete: SetNull)
+
+  // Legacy relation
+  ownerId String
+  owner   User   @relation("OwnerExpenses", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // New SaaS relation
+  showroomId String
+  showroom   Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([showroomId, date])
+}
+
+model Transaction {
+  id   String          @id @default(cuid())
+  type TransactionType @default(Penjualan)
+
+  carId   String?
+  car     Car?    @relation("CarTransactions", fields: [carId], references: [id], onDelete: SetNull)
+  carName String // Snapshot nama mobil saat dijual
+
+  leadId String?
+  lead   Lead?   @relation("LeadTransactions", fields: [leadId], references: [id], onDelete: SetNull)
+
+  buyerName     String
+  buyerPhone    String?
+  salePrice     Float // Harga jual final
+  paymentMethod PaymentMethod @default(Cash)
+
+  branchId String?
+  branch   Branch? @relation("BranchTransactions", fields: [branchId], references: [id], onDelete: SetNull)
+
+  // Legacy relation
+  ownerId String
+  owner   User   @relation("OwnerTransactions", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // New SaaS relation
+  showroomId String
+  showroom   Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  soldAt DateTime @default(now())
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([showroomId, soldAt])
+}
+
+model Testimonial {
+  id     String @id @default(cuid())
+  quote  String
+  name   String
+  car    String
+  rating Int
+
+  // Testimonial should belong to a showroom
+  showroomId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteContent {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Conversation {
+  id         String              @id @default(cuid())
+  showroomId String
+  customerId String
+  leadId     String?
+  channel    ConversationChannel @default(WHATSAPP)
+  status             String              @default("ACTIVE")
+  assignedToUserId   String?
+  unreadCount        Int                 @default(0)
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  showroom Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  tags     ConversationTag[]
+  followUps FollowUp[]
+
+  messages Message[]
+
+  @@index([showroomId])
+  @@index([customerId])
+  @@index([showroomId, lastMessageAt])
+  @@index([showroomId, status])
+  @@index([showroomId, assignedToUserId])
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  conversationId    String
+  showroomId        String
+  direction         MessageDirection
+  messageType       String           @default("TEXT")
+  body              String
+  externalMessageId String?          @unique
+  status            MessageStatus    @default(QUEUED)
+  sentByUserId      String?
+  failedReason      String?
+  createdAt         DateTime         @default(now())
+  
+  // Media Foundation Phase 3.6
+  mediaId           String?
+  mimeType          String?
+  fileName          String?
+  fileSize          Int?
+  mediaUrl          String?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  showroom     Showroom     @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([showroomId])
+  @@index([externalMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model WhatsAppAccount {
+  id                 String   @id @default(cuid())
+  showroomId         String   @unique
+  phoneNumberId      String   @unique
+  businessAccountId  String?
+  displayPhoneNumber String?
+  accessToken        String?  // Nullable. If null, falls back to global token in .env
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  showroom Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+}
+
+model ConversationTag {
+  id         String   @id @default(cuid())
+  showroomId String
+  name       String
+  color      String?
+  createdAt  DateTime @default(now())
+
+  showroom      Showroom       @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([showroomId, name])
+}
+
+model FollowUp {
+  id               String   @id @default(cuid())
+  showroomId       String
+  conversationId   String
+  customerId       String
+  assignedToUserId String
+  dueAt            DateTime
+  note             String
+  status           String   @default("PENDING") // PENDING, DONE, CANCELLED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  showroom     Showroom     @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedTo   User         @relation(fields: [assignedToUserId], references: [id], onDelete: Cascade)
+
+  @@index([showroomId, status, dueAt])
+  @@index([assignedToUserId, status])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  showroomId String
+  userId     String
+  title      String
+  message    String
+  type       String   // WHATSAPP, ASSIGNMENT, FOLLOW_UP, ERROR
+  isRead     Boolean  @default(false)
+  link       String?
+  createdAt  DateTime @default(now())
+
+  showroom Showroom @relation(fields: [showroomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([showroomId, createdAt])
+}
+

@@ -1,0 +1,88 @@
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+async function main() {
+  console.log('Starting SaaS data migration...')
+
+  const users = await prisma.user.findMany()
+  console.log(`Found ${users.length} users.`)
+
+  for (const user of users) {
+    console.log(`\nProcessing user ${user.email} (${user.id})...`)
+    
+    const baseSlug = user.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'showroom'
+    const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`
+    
+    // Check if membership already exists to prevent duplicate runs
+    const existingMembership = await prisma.userMembership.findFirst({
+      where: { userId: user.id }
+    })
+
+    let showroomId = existingMembership?.showroomId
+
+    if (!showroomId) {
+      // Create Showroom
+      const showroom = await prisma.showroom.create({
+        data: {
+          name: `Showroom ${user.name}`,
+          slug: slug,
+          email: user.email,
+        }
+      })
+      showroomId = showroom.id
+      console.log(`  -> Created Showroom ${showroom.id}`)
+      
+      // Create Membership
+      await prisma.userMembership.create({
+        data: {
+          userId: user.id,
+          showroomId: showroom.id,
+          role: 'OWNER'
+        }
+      })
+      console.log(`  -> Created UserMembership (OWNER)`)
+    } else {
+      console.log(`  -> User already has a showroom (ID: ${showroomId})`)
+    }
+    
+    // Update relationships for all entities where ownerId matches and showroomId is null
+    const carResult = await prisma.car.updateMany({
+      where: { ownerId: user.id, showroomId: null },
+      data: { showroomId: showroomId }
+    })
+    
+    const leadResult = await prisma.lead.updateMany({
+      where: { ownerId: user.id, showroomId: null },
+      data: { showroomId: showroomId }
+    })
+    
+    const branchResult = await prisma.branch.updateMany({
+      where: { ownerId: user.id, showroomId: null },
+      data: { showroomId: showroomId }
+    })
+    
+    const expenseResult = await prisma.expense.updateMany({
+      where: { ownerId: user.id, showroomId: null },
+      data: { showroomId: showroomId }
+    })
+    
+    const transactionResult = await prisma.transaction.updateMany({
+      where: { ownerId: user.id, showroomId: null },
+      data: { showroomId: showroomId }
+    })
+    
+    console.log(`  -> Migrated entities: ${carResult.count} Cars, ${leadResult.count} Leads, ${branchResult.count} Branches, ${expenseResult.count} Expenses, ${transactionResult.count} Transactions`)
+  }
+  
+  console.log('\nMigration completed successfully.')
+}
+
+main()
+  .catch(e => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

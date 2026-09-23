@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <!-- Studio Floor Spot -->
+    <radialGradient id="spotlight" cx="50%" cy="75%" r="60%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Body Metallic Paint Gradient -->
+    <linearGradient id="carBody" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="30%" stop-color="#475569"/>
+      <stop offset="70%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <!-- Headlight Glow -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="750" fill="url(#bgGrad)"/>
+  <rect width="1200" height="750" fill="url(#spotlight)"/>
+
+  <!-- Subtle Studio Grid -->
+  <g opacity="0.07" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="550" x2="1200" y2="550"/>
+    <line x1="0" y1="620" x2="1200" y2="620"/>
+    <line x1="0" y1="670" x2="1200" y2="670"/>
+    <line x1="600" y1="500" x2="200" y2="750"/>
+    <line x1="600" y1="500" x2="1000" y2="750"/>
+  </g>
+
+  <!-- Brand Watermark in Background -->
+  <text x="600" y="240" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="110" fill="#ffffff" opacity="0.04" text-anchor="middle" letter-spacing="15">
+    TOYOTA
+  </text>
+
+  <!-- Ground Reflection Shadow -->
+  <ellipse cx="600" cy="580" rx="460" ry="45" fill="#000000" opacity="0.6"/>
+
+  <!-- SUV Car Vector Silhouette (Toyota Fortuner Side 3/4 Profile) -->
+  <g transform="translate(140, 160)">
+    <!-- Main Body Shape -->
+    <path d="M 90 320 
+             L 140 240 
+             Q 220 180 340 160 
+             L 560 160 
+             Q 680 160 760 210 
+             L 850 250 
+             Q 890 280 900 320 
+             L 910 360 
+             L 90 360 Z" 
+          fill="url(#carBody)" stroke="#64748b" stroke-width="3"/>
+
+    <!-- Roof Line & Pillars -->
+    <path d="M 280 165 L 360 80 Q 480 65 640 65 L 750 145 Z" fill="#0f172a" stroke="#475569" stroke-width="3"/>
+    <path d="M 370 85 L 500 85 L 500 155 L 350 155 Z" fill="#1e293b" opacity="0.8"/>
+    <path d="M 520 85 L 670 85 L 720 145 L 520 145 Z" fill="#1e293b" opacity="0.8"/>
+
+    <!-- Front Grille & Headlight (GR Sport) -->
+    <path d="M 830 250 L 890 260 L 870 330 L 810 310 Z" fill="#020617" stroke="#38bdf8" stroke-width="2"/>
+    <polygon points="850,255 895,265 885,285 845,275" fill="#e0f2fe" filter="url(#glow)"/>
+
+    <!-- Front & Rear Wheel Arches -->
+    <path d="M 180 360 A 75 75 0 0 1 330 360" fill="#0f172a"/>
+    <path d="M 670 360 A 75 75 0 0 1 820 360" fill="#0f172a"/>
+
+    <!-- Wheels (Alloy GR Sport Rim) -->
+    <g transform="translate(255, 360)">
+      <circle r="65" fill="#0f172a" stroke="#334155" stroke-width="8"/>
+      <circle r="45" fill="#1e293b" stroke="#cbd5e1" stroke-width="4"/>
+      <circle r="15" fill="#ef4444"/>
+      <line x1="-40" y1="0" x2="40" y2="0" stroke="#94a3b8" stroke-width="6"/>
+      <line x1="0" y1="-40" x2="0" y2="40" stroke="#94a3b8" stroke-width="6"/>
+      <line x1="-30" y1="-30" x2="30" y2="30" stroke="#94a3b8" stroke-width="5"/>
+      <line x1="-30" y1="30" x2="30" y2="-30" stroke="#94a3b8" stroke-width="5"/>
+    </g>
+    <g transform="translate(745, 360)">
+      <circle r="65" fill="#0f172a" stroke="#334155" stroke-width="8"/>
+      <circle r="45" fill="#1e293b" stroke="#cbd5e1" stroke-width="4"/>
+      <circle r="15" fill="#ef4444"/>
+      <line x1="-40" y1="0" x2="40" y2="0" stroke="#94a3b8" stroke-width="6"/>
+      <line x1="0" y1="-40" x2="0" y2="40" stroke="#94a3b8" stroke-width="6"/>
+      <line x1="-30" y1="-30" x2="30" y2="30" stroke="#94a3b8" stroke-width="5"/>
+      <line x1="-30" y1="30" x2="30" y2="-30" stroke="#94a3b8" stroke-width="5"/>
+    </g>
+
+    <!-- Side Character Line & GR Sport Badge Accent -->
+    <path d="M 200 270 Q 500 250 820 280" stroke="#e2e8f0" stroke-width="3" fill="none" opacity="0.6"/>
+    <rect x="220" y="300" width="45" height="12" rx="3" fill="#ef4444"/>
+    <text x="242" y="309" font-family="'Inter', sans-serif" font-weight="900" font-size="8" fill="#ffffff" text-anchor="middle">GR</text>
+  </g>
+
+  <!-- Official Toyota Emblem (Top Left Badge) -->
+  <g transform="translate(80, 80)">
+    <rect width="210" height="50" rx="25" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <!-- Toyota Oval Logo -->
+    <ellipse cx="35" cy="25" rx="18" ry="12" fill="none" stroke="#ef4444" stroke-width="3"/>
+    <ellipse cx="35" cy="25" rx="7" ry="11" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <ellipse cx="35" cy="20" rx="14" ry="5" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <text x="65" y="31" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" letter-spacing="2">TOYOTA</text>
+  </g>
+
+  <!-- Model Title Box (Bottom Overlay) -->
+  <g transform="translate(80, 620)">
+    <text font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="32" fill="#ffffff" letter-spacing="1">
+      FORTUNER GR SPORT
+    </text>
+    <text y="30" font-family="'Inter', system-ui, sans-serif" font-weight="700" font-size="16" fill="#ef4444" letter-spacing="3">
+      2.8 DIESEL • 4X2 AUTOMATIC
+    </text>
+  </g>
+</svg>

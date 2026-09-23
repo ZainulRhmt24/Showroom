@@ -1,0 +1,34 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ArrowRight, BadgeCheck, Building2, CheckCircle2, MapPin, MessageCircle, ShieldCheck } from 'lucide-react'
+import { PublicCarCard } from '@/components/public/PublicCarCard'
+import { getFeaturedPublicCars, getPublicBranches, getPublicShowroomBySlug, publicSiteUrl, publicWhatsAppUrl } from '@/lib/public-showroom'
+
+export const dynamic = 'force-dynamic'
+type ShowroomPageProps = { params: Promise<{ slug: string }> }
+
+export async function generateMetadata({ params }: ShowroomPageProps): Promise<Metadata> {
+  const { slug } = await params
+  const showroom = await getPublicShowroomBySlug(slug)
+  if (!showroom) return { title: 'Showroom tidak ditemukan' }
+  const title = `${showroom.name} | Showroom Mobil Bekas`
+  const description = showroom.description || showroom.tagline || `Temukan koleksi mobil berkualitas dari ${showroom.name}.`
+  return { title, description, alternates: { canonical: `/showroom/${showroom.slug}` }, openGraph: { title, description, url: publicSiteUrl(`/showroom/${showroom.slug}`), images: showroom.logo ? [{ url: showroom.logo }] : undefined } }
+}
+
+export default async function ShowroomHome({ params }: ShowroomPageProps) {
+  const { slug } = await params
+  const showroom = await getPublicShowroomBySlug(slug)
+  if (!showroom) return null
+  const [cars, branches] = await Promise.all([getFeaturedPublicCars(showroom.id), getPublicBranches(showroom.id)])
+  const base = `/showroom/${showroom.slug}`
+  const whatsapp = publicWhatsAppUrl(showroom.whatsapp || showroom.phone, `Halo ${showroom.name}, saya ingin mendapatkan informasi tentang koleksi mobil Anda.`)
+
+  return <>
+    <section className="overflow-hidden bg-slate-950 text-white"><div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.25fr_.75fr] lg:px-8 lg:py-28"><div className="max-w-3xl"><p className="mb-5 text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">{showroom.city || 'Showroom terpercaya'}</p><h1 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">{showroom.heroTitle || `Temukan Mobil Impian Anda di ${showroom.name}`}</h1><p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">{showroom.heroDescription || showroom.tagline || 'Koleksi kendaraan berkualitas, harga transparan, dan tim sales yang siap membantu setiap langkah Anda.'}</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href={`${base}/cars`} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-slate-200">Lihat Koleksi Mobil <ArrowRight className="h-4 w-4" /></Link>{whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 px-6 py-3.5 text-sm font-bold transition hover:bg-white/10"><MessageCircle className="h-4 w-4" /> {showroom.primaryContactLabel || 'Chat WhatsApp'}</a>}</div></div><div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"><p className="text-sm font-semibold text-slate-300">Kenapa memilih kami?</p><div className="mt-5 space-y-4">{['Unit terverifikasi', 'Harga transparan', 'Proses pembelian mudah', 'Sales siap membantu'].map(item => <div key={item} className="flex items-center gap-3 text-sm font-medium"><CheckCircle2 className="h-5 w-5 text-emerald-400" />{item}</div>)}</div></div></div></section>
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Pilihan showroom</p><h2 className="mt-2 text-3xl font-black tracking-tight">Mobil pilihan untuk Anda</h2></div><Link href={`${base}/cars`} className="hidden text-sm font-bold text-slate-950 underline-offset-4 hover:underline sm:block">Lihat semua mobil</Link></div>{cars.length ? <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{cars.map(car => <PublicCarCard key={car.slug} car={car} showroomSlug={showroom.slug} />)}</div> : <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Koleksi kendaraan sedang diperbarui.</div>}</section>
+    <section className="bg-white"><div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8"><div><ShieldCheck className="h-7 w-7 text-emerald-700" /><h2 className="mt-4 text-xl font-bold">Kualitas terjaga</h2><p className="mt-2 text-sm leading-6 text-slate-600">Kami membantu Anda menemukan unit yang tepat dengan informasi yang jelas.</p></div><div><BadgeCheck className="h-7 w-7 text-emerald-700" /><h2 className="mt-4 text-xl font-bold">Transparan</h2><p className="mt-2 text-sm leading-6 text-slate-600">Harga dan spesifikasi tersedia agar Anda dapat memilih dengan percaya diri.</p></div><div><MessageCircle className="h-7 w-7 text-emerald-700" /><h2 className="mt-4 text-xl font-bold">Mudah dihubungi</h2><p className="mt-2 text-sm leading-6 text-slate-600">Tim kami siap menjawab pertanyaan Anda melalui WhatsApp.</p></div></div></section>
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Lokasi kami</p><h2 className="mt-2 text-3xl font-black tracking-tight">Temukan cabang kami</h2></div><Link href={`${base}/branches`} className="hidden text-sm font-bold underline-offset-4 hover:underline sm:block">Semua cabang</Link></div><div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{branches.map(branch => <div key={branch.slug} className="rounded-2xl border border-slate-200 bg-white p-5"><Building2 className="h-5 w-5 text-emerald-700" /><h3 className="mt-4 font-bold">{branch.name}</h3><p className="mt-2 flex gap-2 text-sm leading-6 text-slate-600"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{branch.address}, {branch.city}</p>{branch.openDays && <p className="mt-3 text-xs text-slate-500">{branch.openDays}{branch.openHours ? ` · ${branch.openHours}` : ''}</p>}</div>)}</div></section>
+    <section className="bg-emerald-700 text-white"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-14 sm:px-6 md:flex-row md:items-center lg:px-8"><div><h2 className="text-3xl font-black">Butuh bantuan memilih mobil?</h2><p className="mt-2 text-sm text-emerald-50">Hubungi tim {showroom.name} untuk informasi unit dan jadwal kunjungan.</p></div>{whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-emerald-800"><MessageCircle className="h-4 w-4" /> Chat WhatsApp</a>}</div></section>
+  </>
+}
