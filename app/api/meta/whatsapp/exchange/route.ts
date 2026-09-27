@@ -11,10 +11,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Hanya OWNER yang dapat menghubungkan WhatsApp.' }, { status: 403 })
     }
 
-    const { code } = await req.json()
+    const { code, redirectUri } = await req.json()
     if (!code) {
       return NextResponse.json({ success: false, error: 'Authorization code tidak valid.' }, { status: 400 })
     }
+
+    console.log('WhatsApp Token Exchange Flow Started:', {
+      hasRedirectUri: !!redirectUri,
+      redirectUriHost: redirectUri ? new URL(redirectUri).host : 'none',
+      redirectUriPath: redirectUri ? new URL(redirectUri).pathname : 'none'
+    })
 
     const appId = process.env.META_APP_ID
     const appSecret = process.env.META_APP_SECRET
@@ -33,6 +39,10 @@ export async function POST(req: Request) {
       client_secret: appSecret,
       code: code
     })
+    
+    if (redirectUri) {
+      params.append('redirect_uri', redirectUri)
+    }
 
     const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
     const tokenData = await tokenRes.json()

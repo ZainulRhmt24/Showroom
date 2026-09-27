@@ -116,10 +116,11 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
 
   const exchangeCode = async (code: string) => {
     try {
+      const currentRedirectUri = window.location.origin + window.location.pathname;
       const res = await fetch('/api/meta/whatsapp/exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, redirectUri: currentRedirectUri })
       })
 
       const data = await res.json()
