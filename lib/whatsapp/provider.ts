@@ -49,7 +49,7 @@ export class WhatsAppProvider {
     }
 
     try {
-      const response = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+      const response = await fetch(`https://graph.facebook.com/v25.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

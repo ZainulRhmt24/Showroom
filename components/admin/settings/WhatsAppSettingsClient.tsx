@@ -47,7 +47,7 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
         appId: metaAppId,
         autoLogAppEvents: true,
         xfbml: true,
-        version: 'v20.0'
+        version: 'v25.0'
       })
       setIsSdkLoaded(true)
     }
@@ -146,7 +146,7 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
       <div className="p-6">
         <h3 className="font-bold text-lg mb-4">Status Koneksi</h3>
         
-        {account ? (
+        {account && account.businessAccountId && account.phoneNumberId && !account.phoneNumberId.includes('DUMMY') ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl border border-green-100">
               <CheckCircle2 className="w-5 h-5" />

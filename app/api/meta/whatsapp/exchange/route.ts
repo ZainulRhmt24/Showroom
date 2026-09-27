@@ -18,21 +18,34 @@ export async function POST(req: Request) {
 
     const appId = process.env.META_APP_ID
     const appSecret = process.env.META_APP_SECRET
-    const apiVersion = process.env.META_GRAPH_API_VERSION || 'v20.0'
+    const apiVersion = process.env.META_GRAPH_API_VERSION || 'v25.0'
 
     if (!appId || !appSecret) {
       console.error('META_APP_ID or META_APP_SECRET is missing from environment variables.')
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
     }
 
-    // 1. Exchange code for access token
-    const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}`
-    const tokenRes = await fetch(tokenUrl)
+    // 1. Exchange code for access token using GET (as per Meta docs for FB JS SDK)
+    const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token`
+    
+    const params = new URLSearchParams({
+      client_id: appId,
+      client_secret: appSecret,
+      code: code
+    })
+
+    const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
     const tokenData = await tokenRes.json()
 
-    if (tokenData.error) {
-      console.error('Meta Token Exchange Error:', tokenData.error)
-      return NextResponse.json({ success: false, error: 'Gagal menukar kode otorisasi dengan Meta.' }, { status: 400 })
+    if (!tokenRes.ok || tokenData.error) {
+      console.error('Meta Token Exchange Failed:', {
+        status: tokenRes.status,
+        errorCode: tokenData.error?.code,
+        errorType: tokenData.error?.type,
+        errorMessage: tokenData.error?.message,
+        errorSubcode: tokenData.error?.error_subcode
+      })
+      return NextResponse.json({ success: false, error: tokenData.error?.message || 'Gagal menukar kode otorisasi dengan Meta.' }, { status: 400 })
     }
 
     const accessToken = tokenData.access_token
