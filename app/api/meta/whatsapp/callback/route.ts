@@ -69,17 +69,23 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${safeBaseUrl}/admin/settings/whatsapp?error=whatsapp_connect_failed`)
     }
 
-    let wabaId = debugData.data.granular_scopes?.find((s: any) => s.scope === 'whatsapp_business_management' || s.scope === 'whatsapp_business_messaging')?.target_ids?.[0]
+    // SAFE diagnostic logging
+    console.log('Debug token valid:', debugData.data.is_valid)
+    console.log('Scopes:', debugData.data.scopes)
+    console.log('Granular scopes:', debugData.data.granular_scopes?.map((gs: any) => ({
+      scope: gs.scope,
+      targetIdCount: gs.target_ids?.length || 0
+    })))
 
-    // 3. Fallback: Fetch WABA directly if not in scopes
+    const wabaId = debugData.data.granular_scopes?.find(
+      (s: any) => s.scope === 'whatsapp_business_management' || s.scope === 'whatsapp_business_messaging'
+    )?.target_ids?.[0]
+
+    console.log('Discovered WABA ID:', !!wabaId)
+
     if (!wabaId) {
-       const wabaRes = await fetch(`https://graph.facebook.com/v25.0/me/whatsapp_business_accounts?access_token=${accessToken}`)
-       const wabaData = await wabaRes.json()
-       if (!wabaRes.ok || !wabaData.data?.[0]?.id) {
-           console.error('WABA discovery failed', wabaData)
-           return NextResponse.redirect(`${safeBaseUrl}/admin/settings/whatsapp?error=whatsapp_connect_failed`)
-       }
-       wabaId = wabaData.data[0].id
+      console.error('WABA discovery failed: debug token contains no WhatsApp target_ids')
+      return NextResponse.redirect(`${safeBaseUrl}/admin/settings/whatsapp?error=whatsapp_connect_failed`)
     }
 
     // 4. Discover phone numbers
