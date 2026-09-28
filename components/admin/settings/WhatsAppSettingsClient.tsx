@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 interface WhatsAppAccountProps {
   status: string
@@ -18,41 +18,131 @@ interface Props {
   configId: string
 }
 
+declare global {
+  interface Window {
+    fbAsyncInit: () => void
+    FB: any
+  }
+}
+
 export default function WhatsAppSettingsClient({ account, metaAppId, configId }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const [isSdkLoaded, setIsSdkLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
+
+  // We need to keep track of browser wabaId and phoneId from the event
+  // Because FB.login callback doesn't have it.
+  const sessionDataRef = useRef<{ wabaId?: string, phoneId?: string }>({})
 
   useEffect(() => {
-    const errorParam = searchParams.get('error')
-    const connectedParam = searchParams.get('connected')
-
-    if (errorParam === 'whatsapp_connect_failed') {
-      setErrorMsg('Gagal menghubungkan WhatsApp. Pastikan proses autentikasi berhasil.')
-      // Optionally clean up URL
-      router.replace('/admin/settings/whatsapp')
-    }
-
-    if (connectedParam === '1') {
-      setSuccessMsg('WhatsApp berhasil dihubungkan!')
-      // Optionally clean up URL
-      router.replace('/admin/settings/whatsapp')
-    }
-  }, [searchParams, router])
-
-  const handleConnect = () => {
     if (!metaAppId || !configId) {
       setErrorMsg('Konfigurasi Meta belum lengkap di server. Hubungi administrator.')
       return
     }
 
+    if (window.FB) {
+      setIsSdkLoaded(true)
+      return
+    }
+
+    window.fbAsyncInit = function() {
+      window.FB.init({
+        appId: metaAppId,
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: 'v25.0'
+      })
+      setIsSdkLoaded(true)
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://connect.facebook.net/en_US/sdk.js'
+    script.async = true
+    script.defer = true
+    script.crossOrigin = 'anonymous'
+    document.body.appendChild(script)
+
+    return () => {}
+  }, [metaAppId, configId])
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') {
+        return
+      }
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          console.log('WA_EMBEDDED_SIGNUP event:', data.event)
+          if (data.event === 'CANCEL') {
+            setIsLoading(false)
+            setErrorMsg('Proses pendaftaran dibatalkan.')
+          } else if (data.event === 'FINISH') {
+             sessionDataRef.current = {
+               wabaId: data.data?.waba_id,
+               phoneId: data.data?.phone_number_id
+             }
+          } else if (data.event === 'ERROR') {
+             setIsLoading(false)
+             setErrorMsg(data.data?.error_message || 'Terjadi kesalahan pada popup Meta.')
+          }
+        }
+      } catch (e) {
+        // Ignore JSON parse errors for unrelated messages
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  const handleConnect = () => {
+    if (!isSdkLoaded || !window.FB) {
+      setErrorMsg('Facebook SDK belum siap. Silakan muat ulang halaman.')
+      return
+    }
+
     setIsLoading(true)
     setErrorMsg('')
-    setSuccessMsg('')
+    sessionDataRef.current = {} // clear previous session data
 
-    window.location.href = '/api/meta/whatsapp/start'
+    window.FB.login((response: any) => {
+      if (response.authResponse && response.authResponse.code) {
+        exchangeCode(response.authResponse.code, sessionDataRef.current.wabaId)
+      } else {
+        setIsLoading(false)
+        setErrorMsg('Proses dibatalkan atau popup Meta diblokir browser. Izinkan popup untuk melanjutkan.')
+      }
+    }, {
+      config_id: configId,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {}
+      }
+    })
+  }
+
+  const exchangeCode = async (code: string, browserWabaId?: string) => {
+    try {
+      const res = await fetch('/api/meta/whatsapp/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, browserWabaId })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        router.refresh() // Reload server data to show updated connection status
+      } else {
+        setErrorMsg(data.error || 'WhatsApp belum berhasil terhubung. Periksa konfigurasi Meta.')
+      }
+    } catch (error) {
+      setErrorMsg('Terjadi kesalahan koneksi saat memproses pendaftaran.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const maskString = (str: string | null) => {
@@ -65,14 +155,14 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
     <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       <div className="p-6">
         <h3 className="font-bold text-lg mb-4">Status Koneksi</h3>
-        
+
         {account && account.businessAccountId && account.phoneNumberId && !account.phoneNumberId.includes('DUMMY') ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl border border-green-100">
               <CheckCircle2 className="w-5 h-5" />
               <span className="font-semibold text-sm">WhatsApp Terhubung</span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-xl">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Nomor Telepon</p>
@@ -91,11 +181,11 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
                 <p className="font-medium">{new Date(account.connectedAt).toLocaleDateString('id-ID')}</p>
               </div>
             </div>
-            
+
             <div className="pt-4 flex gap-3">
-              <button 
+              <button
                 onClick={handleConnect}
-                disabled={isLoading}
+                disabled={isLoading || !isSdkLoaded}
                 className="px-4 py-2 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -109,23 +199,20 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
               <XCircle className="w-5 h-5" />
               <span className="font-semibold text-sm">Belum terhubung</span>
             </div>
-            
+
             <div className="pt-2">
-              <button 
+              <button
                 onClick={handleConnect}
-                disabled={isLoading}
+                disabled={isLoading || !isSdkLoaded}
                 className="px-4 py-2 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Hubungkan WhatsApp
               </button>
+              {!isSdkLoaded && !errorMsg && (
+                <p className="text-xs text-muted-foreground mt-2">Memuat Meta SDK...</p>
+              )}
             </div>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="mt-4 p-3 bg-green-50 text-green-600 rounded-xl border border-green-100 text-sm">
-            {successMsg}
           </div>
         )}
 
