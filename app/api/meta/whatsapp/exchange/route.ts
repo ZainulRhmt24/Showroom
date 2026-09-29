@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const params = new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      code: code
+      code
     })
 
     const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
