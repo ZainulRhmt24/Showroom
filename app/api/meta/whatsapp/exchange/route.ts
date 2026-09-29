@@ -26,8 +26,7 @@ export async function POST(req: Request) {
     const params = new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      code: code,
-      redirect_uri: "" // Required by Meta for JS SDK flow
+      code: code
     })
 
     const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
