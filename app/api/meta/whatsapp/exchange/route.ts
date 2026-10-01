@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     const params = new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      code
+      code,
+      redirect_uri: 'https://showroom-os-wktd.vercel.app/admin/settings/whatsapp'
     })
 
     const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
