@@ -21,16 +21,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
     }
 
-    // 1. Exchange code for access token using GET (as per Meta docs for FB JS SDK)
+    // 1. Exchange code for access token using POST
     const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token`
-    const params = new URLSearchParams({
-      client_id: appId,
-      client_secret: appSecret,
-      code,
-      redirect_uri: 'https://showroom-os-wktd.vercel.app/admin/settings/whatsapp'
+
+    const tokenRes = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        client_id: appId,
+        client_secret: appSecret,
+        code,
+        grant_type: 'authorization_code'
+      })
     })
 
-    const tokenRes = await fetch(`${tokenUrl}?${params.toString()}`)
     const tokenData = await tokenRes.json()
 
     if (!tokenRes.ok || tokenData.error) {

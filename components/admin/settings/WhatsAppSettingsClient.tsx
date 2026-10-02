@@ -118,9 +118,8 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
       config_id: configId,
       response_type: 'code',
       override_default_response_type: true,
-      fallback_redirect_uri: 'https://showroom-os-wktd.vercel.app/admin/settings/whatsapp',
       extras: {
-        setup: {}
+        version: 'v4'
       }
     })
   }
