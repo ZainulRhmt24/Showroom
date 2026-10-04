@@ -17,6 +17,16 @@ export async function POST(req: Request) {
     const apiVersion = process.env.META_GRAPH_API_VERSION || 'v25.0'
     const redirectUri = process.env.META_REDIRECT_URI
 
+    console.log('META EXCHANGE DEBUG', {
+      hasCode: Boolean(code),
+      codeLength: code?.length ?? 0,
+      hasBrowserWabaId: Boolean(browserWabaId),
+      browserWabaIdLength: browserWabaId?.length ?? 0,
+      appId: process.env.META_APP_ID,
+      redirectUri: process.env.META_REDIRECT_URI,
+      graphVersion: process.env.META_GRAPH_API_VERSION,
+    });
+
     if (!appId || !appSecret) {
       console.error('META_APP_ID or WHATSAPP_APP_SECRET is missing from environment variables.')
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
