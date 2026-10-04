@@ -15,10 +15,16 @@ export async function POST(req: Request) {
     const appId = process.env.META_APP_ID
     const appSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_APP_SECRET
     const apiVersion = process.env.META_GRAPH_API_VERSION || 'v25.0'
+    const redirectUri = process.env.META_REDIRECT_URI
 
     if (!appId || !appSecret) {
       console.error('META_APP_ID or WHATSAPP_APP_SECRET is missing from environment variables.')
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
+    }
+
+    if (!redirectUri) {
+      console.error('META_REDIRECT_URI is missing from environment variables.')
+      return NextResponse.json({ success: false, error: 'Konfigurasi Redirect URI belum lengkap di server.' }, { status: 500 })
     }
 
     // 1. Exchange code for access token using POST
