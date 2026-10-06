@@ -48,6 +48,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         client_id: appId,
         client_secret: appSecret,
+        redirect_uri: redirectUri,
         code,
         grant_type: 'authorization_code'
       })
@@ -76,11 +77,11 @@ export async function POST(req: Request) {
     }
 
     console.log('Debug token valid:', debugData.data.is_valid)
-    
+
     // Check scopes
     const scopes = debugData.data.granular_scopes || []
     const messagingScopes = scopes.filter((s: any) => s.scope === 'whatsapp_business_messaging' || s.scope === 'whatsapp_business_management')
-    
+
     let verifiedWabaId = null
     for (const scope of messagingScopes) {
       if (scope.target_ids && scope.target_ids.length > 0) {
