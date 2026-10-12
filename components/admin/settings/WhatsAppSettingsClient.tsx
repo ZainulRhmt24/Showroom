@@ -127,9 +127,7 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
       config_id: configId,
       response_type: 'code',
       override_default_response_type: true,
-      extras: {
-        version: 'v4'
-      }
+      extras: {}
     })
   }
 
@@ -138,7 +136,7 @@ export default function WhatsAppSettingsClient({ account, metaAppId, configId }:
       const res = await fetch('/api/meta/whatsapp/exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, browserWabaId, currentUrl: window.location.href.split('#')[0].split('?')[0] }) // Strip hash/query just in case
+        body: JSON.stringify({ code, browserWabaId })
       })
 
       const data = await res.json()

@@ -6,7 +6,7 @@ import { encryptToken } from '@/lib/encryption'
 export async function POST(req: Request) {
   try {
     const { showroom } = await requireOwner()
-    const { code, browserWabaId, currentUrl } = await req.json()
+    const { code, browserWabaId } = await req.json()
 
     if (!code) {
       return NextResponse.json({ success: false, error: 'Authorization code tidak valid.' }, { status: 400 })
@@ -21,39 +21,39 @@ export async function POST(req: Request) {
       codeLength: code?.length ?? 0,
       hasBrowserWabaId: Boolean(browserWabaId),
       browserWabaIdLength: browserWabaId?.length ?? 0,
-      appId: process.env.META_APP_ID,
-      currentUrl,
-      graphVersion: process.env.META_GRAPH_API_VERSION,
-    });
+      appId,
+      graphVersion: apiVersion,
+    })
 
     if (!appId || !appSecret) {
       console.error('META_APP_ID or WHATSAPP_APP_SECRET is missing from environment variables.')
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
     }
 
-    // 1. Exchange code for access token using POST with x-www-form-urlencoded
-    const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token`
-    const formParams = new URLSearchParams({
+    // 1. Exchange code for access token using GET with client_id, client_secret, and code
+    const queryParams = new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
       code,
-      grant_type: 'authorization_code',
     })
+    const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token?${queryParams.toString()}`
 
     const tokenRes = await fetch(tokenUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
       },
-      body: formParams.toString(),
     })
     const tokenData = await tokenRes.json()
 
     if (!tokenRes.ok || tokenData.error) {
       console.error('Meta Token Exchange Failed:', {
         status: tokenRes.status,
-        error: tokenData.error?.message
+        type: tokenData.error?.type,
+        code: tokenData.error?.code,
+        subcode: tokenData.error?.error_subcode,
+        message: tokenData.error?.message,
+        fbtrace_id: tokenData.error?.fbtrace_id,
       })
       return NextResponse.json({ success: false, error: 'Gagal menukar kode otorisasi dengan Meta.' }, { status: 400 })
     }
@@ -66,7 +66,13 @@ export async function POST(req: Request) {
     const debugData = await debugRes.json()
 
     if (debugData.error || !debugData.data || !debugData.data.is_valid) {
-      console.error('Meta Debug Token Error or Invalid', debugData)
+      console.error('Meta Debug Token Error or Invalid', {
+        type: debugData.error?.type,
+        code: debugData.error?.code,
+        subcode: debugData.error?.error_subcode,
+        message: debugData.error?.message,
+        fbtrace_id: debugData.error?.fbtrace_id,
+      })
       return NextResponse.json({ success: false, error: 'Gagal memverifikasi token dengan Meta.' }, { status: 400 })
     }
 
@@ -102,7 +108,13 @@ export async function POST(req: Request) {
     const phoneData = await phoneRes.json()
 
     if (phoneData.error || !phoneData.data || phoneData.data.length === 0) {
-      console.error('Meta Phone Number Discovery Error:', phoneData.error)
+      console.error('Meta Phone Number Discovery Error:', {
+        type: phoneData.error?.type,
+        code: phoneData.error?.code,
+        subcode: phoneData.error?.error_subcode,
+        message: phoneData.error?.message,
+        fbtrace_id: phoneData.error?.fbtrace_id,
+      })
       return NextResponse.json({ success: false, error: 'Tidak dapat menemukan nomor telepon di WhatsApp Business Account Anda.' }, { status: 400 })
     }
 
@@ -149,7 +161,13 @@ export async function POST(req: Request) {
     const subscribeData = await subscribeRes.json()
 
     if (subscribeData.error || !subscribeData.success) {
-      console.error('Meta App Subscription Error:', subscribeData.error)
+      console.error('Meta App Subscription Error:', {
+        type: subscribeData.error?.type,
+        code: subscribeData.error?.code,
+        subcode: subscribeData.error?.error_subcode,
+        message: subscribeData.error?.message,
+        fbtrace_id: subscribeData.error?.fbtrace_id,
+      })
     }
 
     return NextResponse.json({
@@ -161,7 +179,7 @@ export async function POST(req: Request) {
       }
     })
   } catch (error: any) {
-    console.error('Token exchange error:', error)
+    console.error('Token exchange error:', error?.message || error)
     return NextResponse.json({ success: false, error: 'Terjadi kesalahan sistem saat memproses integrasi WhatsApp.' }, { status: 500 })
   }
 }
