@@ -23,6 +23,8 @@ export async function POST(req: Request) {
       browserWabaIdLength: browserWabaId?.length ?? 0,
       appId,
       graphVersion: apiVersion,
+      commitSha: process.env.VERCEL_GIT_COMMIT_SHA || 'not set',
+      referer: req.headers.get('referer') || 'none',
     })
 
     if (!appId || !appSecret) {
@@ -30,20 +32,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Konfigurasi Meta di server belum lengkap.' }, { status: 500 })
     }
 
-    // 1. Exchange code for access token using GET with client_id, client_secret, and code
-    const queryParams = new URLSearchParams({
-      client_id: appId,
-      client_secret: appSecret,
-      code,
-    })
-    const tokenUrl = `https://graph.facebook.com/${apiVersion}/oauth/access_token?${queryParams.toString()}`
-
-    const tokenRes = await fetch(tokenUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    })
+    // 1. Exchange code -> access token (tanpa redirect_uri; code dari FB.login Embedded Signup)
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/${apiVersion}/oauth/access_token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: appId,
+          client_secret: appSecret,
+          code,
+        }),
+      }
+    )
     const tokenData = await tokenRes.json()
 
     if (!tokenRes.ok || tokenData.error) {
@@ -61,8 +62,10 @@ export async function POST(req: Request) {
     const accessToken = tokenData.access_token
 
     // 2. Discover WABA ID using debug_token
-    const debugUrl = `https://graph.facebook.com/${apiVersion}/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`
-    const debugRes = await fetch(debugUrl)
+    const debugUrl = `https://graph.facebook.com/${apiVersion}/debug_token?input_token=${accessToken}`
+    const debugRes = await fetch(debugUrl, {
+      headers: { 'Authorization': `Bearer ${appId}|${appSecret}` },
+    })
     const debugData = await debugRes.json()
 
     if (debugData.error || !debugData.data || !debugData.data.is_valid) {
@@ -103,8 +106,10 @@ export async function POST(req: Request) {
     }
 
     // 3. Discover Phone Number ID
-    const phoneUrl = `https://graph.facebook.com/${apiVersion}/${verifiedWabaId}/phone_numbers?access_token=${accessToken}`
-    const phoneRes = await fetch(phoneUrl)
+    const phoneUrl = `https://graph.facebook.com/${apiVersion}/${verifiedWabaId}/phone_numbers`
+    const phoneRes = await fetch(phoneUrl, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
     const phoneData = await phoneRes.json()
 
     if (phoneData.error || !phoneData.data || phoneData.data.length === 0) {
@@ -156,8 +161,11 @@ export async function POST(req: Request) {
     })
 
     // 5. Subscribe App to WABA
-    const subscribeUrl = `https://graph.facebook.com/${apiVersion}/${verifiedWabaId}/subscribed_apps?access_token=${accessToken}`
-    const subscribeRes = await fetch(subscribeUrl, { method: 'POST' })
+    const subscribeUrl = `https://graph.facebook.com/${apiVersion}/${verifiedWabaId}/subscribed_apps`
+    const subscribeRes = await fetch(subscribeUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
     const subscribeData = await subscribeRes.json()
 
     if (subscribeData.error || !subscribeData.success) {
